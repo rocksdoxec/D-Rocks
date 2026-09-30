@@ -6,45 +6,46 @@ import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 
 export default {
     data: new SlashCommandBuilder()
-        .setName("ban")
-        .setDescription("Ban a user from the server")
+        .setName("حظر")
+        .setDescription("حظر عضو من السيرفر")
         .addUserOption((option) =>
             option
-                .setName("target")
-                .setDescription("The user to ban")
+                .setName("العضو")
+                .setDescription("العضو الذي تريد حظره")
                 .setRequired(true),
         )
         .addStringOption((option) =>
-            option.setName("reason").setDescription("Reason for the ban"),
+            option.setName("السبب").setDescription("سبب الحظر"),
         )
         .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers),
     category: "moderation",
 
     async execute(interaction, config, client) {
-        const user = interaction.options.getUser("target");
-        const reason = interaction.options.getString("reason") || "No reason provided";
+        const user = interaction.options.getUser("العضو");
+        const reason = interaction.options.getString("السبب") || "لم يتم تحديد سبب";
 
         if (!user) {
             throw new TitanBotError(
-                'Missing target user',
+                'العضو غير موجود',
                 ErrorTypes.USER_INPUT,
-                'You must specify a user to ban.',
+                'يجب عليك تحديد عضو لحظره.',
                 { subtype: 'invalid_user' },
             );
         }
 
         if (user.id === interaction.user.id) {
             throw new TitanBotError(
-                'Cannot ban self',
+                'لا يمكن حظر نفسك',
                 ErrorTypes.VALIDATION,
-                'You cannot ban yourself.',
+                'لا يمكنك حظر نفسك.',
             );
         }
+
         if (user.id === client.user.id) {
             throw new TitanBotError(
-                'Cannot ban bot',
+                'لا يمكن حظر البوت',
                 ErrorTypes.VALIDATION,
-                'You cannot ban the bot.',
+                'لا يمكنك حظر البوت.',
             );
         }
 
@@ -58,8 +59,8 @@ export default {
         await InteractionHelper.universalReply(interaction, {
             embeds: [
                 successEmbed(
-                    `🚫 **Banned** ${user.tag}`,
-                    `**Reason:** ${reason}\n**Case ID:** #${result.caseId}`,
+                    `🚫 **تم حظر** ${user.tag}`,
+                    `**السبب:** ${reason}\n**رقم الحالة:** #${result.caseId}`,
                 ),
             ],
         });

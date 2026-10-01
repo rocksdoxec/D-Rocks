@@ -65,7 +65,7 @@ export default {
 
             // رسالة عادية بدل Embed
             await InteractionHelper.safeEditReply(interaction, {
-                content: `🔒 **تم قفل القناة**\n${channel} تم قفلها الآن. لا يمكن لأحد إرسال رسائل هنا.`,
+                content: `🔒 **تم قفل القناة**\n${channel} `,
             });
 
         } catch (error) {

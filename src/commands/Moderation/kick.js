@@ -7,15 +7,15 @@ import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("kick")
-        .setDescription("Kick a user from the server")
+        .setDescription("طرد عضو من السيرفر")
         .addUserOption((option) =>
             option
                 .setName("target")
-                .setDescription("The user to kick")
+                .setDescription("العضو الذي تريد طرده")
                 .setRequired(true),
         )
         .addStringOption((option) =>
-            option.setName("reason").setDescription("Reason for the kick"),
+            option.setName("reason").setDescription("سبب الطرد"),
         )
         .setDefaultMemberPermissions(PermissionFlagsBits.KickMembers),
     category: "moderation",
@@ -23,38 +23,38 @@ export default {
     async execute(interaction, config, client) {
         const targetUser = interaction.options.getUser("target");
         const member = interaction.options.getMember("target");
-        const reason = interaction.options.getString("reason") || "No reason provided";
+        const reason = interaction.options.getString("reason") || "لم يتم تحديد سبب";
 
         if (!targetUser) {
             throw new TitanBotError(
-                'Missing target user',
+                'العضو غير موجود',
                 ErrorTypes.USER_INPUT,
-                'You must specify a user to kick.',
+                'يجب عليك تحديد عضو لطرده.',
                 { subtype: 'invalid_user' },
             );
         }
 
         if (targetUser.id === interaction.user.id) {
             throw new TitanBotError(
-                "Cannot kick self",
+                "لا يمكن طرد نفسك",
                 ErrorTypes.VALIDATION,
-                "You cannot kick yourself.",
+                "لا يمكنك طرد نفسك.",
             );
         }
 
         if (targetUser.id === client.user.id) {
             throw new TitanBotError(
-                "Cannot kick bot",
+                "لا يمكن طرد البوت",
                 ErrorTypes.VALIDATION,
-                "You cannot kick the bot.",
+                "لا يمكنك طرد البوت.",
             );
         }
 
         if (!member) {
             throw new TitanBotError(
-                "Target not found",
+                "العضو غير موجود",
                 ErrorTypes.USER_INPUT,
-                "The target user is not currently in this server.",
+                "العضو المحدد ليس موجودًا حاليًا في هذا السيرفر.",
                 { subtype: 'user_not_found' },
             );
         }
@@ -69,8 +69,8 @@ export default {
         await InteractionHelper.universalReply(interaction, {
             embeds: [
                 successEmbed(
-                    `👢 **Kicked** ${targetUser.tag}`,
-                    `**Reason:** ${reason}\n**Case ID:** #${result.caseId}`,
+                    `✈️ **تم طرد** ${targetUser.tag}`,
+                    `**السبب:** ${reason}\n**رقم الحالة:** #${result.caseId}`,
                 ),
             ],
         });

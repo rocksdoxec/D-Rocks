@@ -6,17 +6,20 @@ import { getColor } from '../../config/bot.js';
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
+
 export default {
     data: new SlashCommandBuilder()
-        .setName("unlock")
+        .setName("فتح")
         .setDescription(
-            "Unlocks the current channel (allows @everyone to send messages again).",
+            "فتح القناة الحالية والسماح للأعضاء بإرسال الرسائل مرة أخرى."
         )
-.setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
+
     category: "moderation",
 
     async execute(interaction, config, client) {
         const deferSuccess = await InteractionHelper.safeDefer(interaction);
+
         if (!deferSuccess) {
             logger.warn(`Unlock interaction defer failed`, {
                 userId: interaction.user.id,
@@ -31,13 +34,15 @@ export default {
 
         try {
             const currentPermissions = channel.permissionsFor(everyoneRole);
+
             if (
-                currentPermissions.has(PermissionFlagsBits.SendMessages) ===
-                    true ||
-                currentPermissions.has(PermissionFlagsBits.SendMessages) ===
-                    null
+                currentPermissions.has(PermissionFlagsBits.SendMessages) === true ||
+                currentPermissions.has(PermissionFlagsBits.SendMessages) === null
             ) {
-                return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: `${channel} is not explicitly locked (everyone can already send messages).` });
+                return await replyUserError(interaction, {
+                    type: ErrorTypes.UNKNOWN,
+                    message: `${channel} مفتوحة بالفعل ويمكن للأعضاء إرسال الرسائل.`
+                });
             }
 
             await channel.permissionOverwrites.edit(
@@ -46,7 +51,7 @@ export default {
                 {
                     type: 0,
                     reason: `Channel unlocked by ${interaction.user.tag}`,
-},
+                },
             );
 
             await logEvent({
@@ -63,17 +68,18 @@ export default {
                 }
             });
 
+            // رسالة عادية بدل Embed
             await InteractionHelper.safeEditReply(interaction, {
-                embeds: [
-                    successEmbed(
-                        `🔓 **Channel Unlocked**`,
-                        `${channel} is now unlocked. You may speak now.`,
-                    ),
-                ],
+                content: `🔓 **تم فتح القناة**\n${channel} تم فتحها الآن. يمكنكم إرسال الرسائل هنا.`,
             });
+
         } catch (error) {
             logger.error('Unlock command error:', error);
-            await replyUserError(interaction, { type: ErrorTypes.PERMISSION, message: 'An unexpected error occurred while trying to unlock the channel. Check my permissions (I need \'Manage Channels\').' });
+
+            await replyUserError(interaction, {
+                type: ErrorTypes.PERMISSION,
+                message: 'حدث خطأ أثناء محاولة فتح القناة. تأكد من أن لدي صلاحية **إدارة القنوات (Manage Channels)**.'
+            });
         }
     }
 };

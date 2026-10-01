@@ -70,7 +70,7 @@ export default {
 
             // رسالة عادية بدل Embed
             await InteractionHelper.safeEditReply(interaction, {
-                content: `🔓 **تم فتح القناة**\n${channel} تم فتحها الآن. يمكنكم إرسال الرسائل هنا.`,
+                content: `🔓 **تم فتح القناة**\n${channel}`,
             });
 
         } catch (error) {

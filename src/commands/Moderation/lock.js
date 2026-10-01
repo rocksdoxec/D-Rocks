@@ -19,6 +19,7 @@ export default {
 
     async execute(interaction, config, client) {
         const deferSuccess = await InteractionHelper.safeDefer(interaction);
+
         if (!deferSuccess) {
             logger.warn(`Lock interaction defer failed`, {
                 userId: interaction.user.id,
@@ -62,14 +63,11 @@ export default {
                 }
             });
 
+            // رسالة عادية بدل Embed
             await InteractionHelper.safeEditReply(interaction, {
-                embeds: [
-                    successEmbed(
-                        `🔒 **تم قفل القناة**`,
-                        `${channel} تم قفلها الآن. لا يمكن لأحد إرسال رسائل هنا.`,
-                    ),
-                ],
+                content: `🔒 **تم قفل القناة**\n${channel} تم قفلها الآن. لا يمكن لأحد إرسال رسائل هنا.`,
             });
+
         } catch (error) {
             logger.error('Lock command error:', error);
 

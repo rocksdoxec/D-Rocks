@@ -77,7 +77,7 @@ const TECHNICAL_ERROR_PATTERNS = [
     /unexpected token/i,
     /econnrefused|enotfound|etimedout|econnreset/i,
     /node_modules/i,
-    /\sat\s.+\(.+\:\d+\:\d+\)/,
+    /\sat\s.+\(.+\:\d+:\d+\)/,
 ];
 
 const USER_FACING_ERROR_HINTS = [
@@ -103,6 +103,7 @@ function isUserFacingPlainError(error) {
     }
 
     const message = typeof error?.message === 'string' ? error.message.trim() : '';
+
     if (!message || message.length > 500 || message.includes('\n')) {
         return false;
     }
@@ -112,19 +113,22 @@ function isUserFacingPlainError(error) {
     }
 
     const lowerMessage = message.toLowerCase();
+
     if (USER_FACING_ERROR_HINTS.some((pattern) => pattern.test(message))) {
         return true;
     }
 
-    if (lowerMessage.includes('not found')
-        || lowerMessage.includes('not configured')
-        || lowerMessage.includes('not set up')
-        || lowerMessage.includes('not available')
-        || lowerMessage.includes('permission')
-        || lowerMessage.includes('must be ')
-        || lowerMessage.includes('at least ')
-        || lowerMessage.includes('no longer than ')
-        || lowerMessage.includes('at most ')) {
+    if (
+        lowerMessage.includes('not found') ||
+        lowerMessage.includes('not configured') ||
+        lowerMessage.includes('not set up') ||
+        lowerMessage.includes('not available') ||
+        lowerMessage.includes('permission') ||
+        lowerMessage.includes('must be ') ||
+        lowerMessage.includes('at least ') ||
+        lowerMessage.includes('no longer than ') ||
+        lowerMessage.includes('at most ')
+    ) {
         return true;
     }
 
@@ -134,28 +138,46 @@ function isUserFacingPlainError(error) {
 function inferErrorTypeFromUserMessage(message = '') {
     const lowerMessage = message.toLowerCase();
 
-    if (lowerMessage.includes('permission') || lowerMessage.includes('not allowed')) {
+    if (
+        lowerMessage.includes('permission') ||
+        lowerMessage.includes('not allowed')
+    ) {
         return ErrorTypes.PERMISSION;
     }
 
-    if (lowerMessage.includes('rate limit') || lowerMessage.includes('cooldown') || lowerMessage.includes('too quickly')) {
+    if (
+        lowerMessage.includes('rate limit') ||
+        lowerMessage.includes('cooldown') ||
+        lowerMessage.includes('too quickly')
+    ) {
         return ErrorTypes.RATE_LIMIT;
     }
 
-    if (lowerMessage.includes('database') || lowerMessage.includes('postgres') || lowerMessage.includes('sql')) {
+    if (
+        lowerMessage.includes('database') ||
+        lowerMessage.includes('postgres') ||
+        lowerMessage.includes('sql')
+    ) {
         return ErrorTypes.DATABASE;
     }
 
-    if (lowerMessage.includes('not found')
-        || lowerMessage.includes('not configured')
-        || lowerMessage.includes('not set up')
-        || lowerMessage.includes('disabled')
-        || lowerMessage.includes('unknown command')
-        || lowerMessage.includes('unknown category')) {
+    if (
+        lowerMessage.includes('not found') ||
+        lowerMessage.includes('not configured') ||
+        lowerMessage.includes('not set up') ||
+        lowerMessage.includes('disabled') ||
+        lowerMessage.includes('unknown command') ||
+        lowerMessage.includes('unknown category')
+    ) {
         return ErrorTypes.CONFIGURATION;
     }
 
-    if (lowerMessage.includes('channel') || lowerMessage.includes('user') || lowerMessage.includes('role') || lowerMessage.includes('mention')) {
+    if (
+        lowerMessage.includes('channel') ||
+        lowerMessage.includes('user') ||
+        lowerMessage.includes('role') ||
+        lowerMessage.includes('mention')
+    ) {
         return ErrorTypes.USER_INPUT;
     }
 
@@ -201,28 +223,50 @@ export function categorizeError(error) {
         return ErrorTypes.PERMISSION;
     }
 
-    // Remaining numeric codes in Discord's ranges (unknown entity 10xxx, request-level 5xxxx, etc.)
+    // Remaining numeric codes in Discord's ranges
     if (typeof code === 'number' && code >= 10000) {
         return ErrorTypes.DISCORD_API;
     }
 
-    if (error?.name === 'AbortError' || message.includes('network') || message.includes('fetch failed') || message.includes('enotconn')) {
+    if (
+        error?.name === 'AbortError' ||
+        message.includes('network') ||
+        message.includes('fetch failed') ||
+        message.includes('enotconn')
+    ) {
         return ErrorTypes.NETWORK;
     }
 
-    if (message.includes('permission') || message.includes('missing access') || message.includes('missing permissions')) {
+    if (
+        message.includes('permission') ||
+        message.includes('missing access') ||
+        message.includes('missing permissions')
+    ) {
         return ErrorTypes.PERMISSION;
     }
 
-    if (message.includes('database') || message.includes('postgres') || message.includes('sql') || message.includes('connection') || message.includes('timeout')) {
+    if (
+        message.includes('database') ||
+        message.includes('postgres') ||
+        message.includes('sql') ||
+        message.includes('connection') ||
+        message.includes('timeout')
+    ) {
         return ErrorTypes.DATABASE;
     }
 
-    if (message.includes('validation') || message.includes('invalid') || message.includes('required')) {
+    if (
+        message.includes('validation') ||
+        message.includes('invalid') ||
+        message.includes('required')
+    ) {
         return ErrorTypes.VALIDATION;
     }
 
-    if (message.includes('config') || message.includes('not found')) {
+    if (
+        message.includes('config') ||
+        message.includes('not found')
+    ) {
         return ErrorTypes.CONFIGURATION;
     }
 
@@ -230,7 +274,10 @@ export function categorizeError(error) {
         return inferErrorTypeFromUserMessage(error.message);
     }
 
-    if (error?.name === 'DiscordAPIError' || error?.name === 'HTTPError') {
+    if (
+        error?.name === 'DiscordAPIError' ||
+        error?.name === 'HTTPError'
+    ) {
         return ErrorTypes.DISCORD_API;
     }
 
@@ -243,26 +290,31 @@ const UserMessages = {
         missing_required: "You're missing some required information. Check the command options and try again.",
         invalid_format: 'The format you provided is incorrect. Check the command usage and try again.'
     },
+
     [ErrorTypes.PERMISSION]: {
         default: "You don't have permission to do that.",
         user_permission: "You don't have permission to use this command.",
         bot_permission: "I don't have the permissions needed to do that in this channel."
     },
+
     [ErrorTypes.CONFIGURATION]: {
         default: 'This feature is not set up yet. Ask a server administrator to configure it.',
         missing_config: 'This feature has not been configured yet. Ask a server administrator to set it up.',
         invalid_config: 'The server configuration for this feature is invalid. Ask a server administrator to review it.'
     },
+
     [ErrorTypes.DATABASE]: {
         default: 'Something went wrong while saving data. Please try again in a moment.',
         connection_failed: 'I could not reach the database. Please try again later.',
         timeout: 'That took too long to complete. Please try again.'
     },
+
     [ErrorTypes.NETWORK]: {
         default: 'I could not reach an external service. Please try again in a moment.',
         timeout: 'The request timed out. Please try again.',
         unreachable: 'The service is unavailable right now. Please try again later.'
     },
+
     [ErrorTypes.DISCORD_API]: {
         default: 'Discord rejected that request. Please try again in a moment.',
         rate_limit: "You're doing that too quickly. Wait a moment and try again.",
@@ -271,16 +323,19 @@ const UserMessages = {
         already_acknowledged: 'That action was already handled. Run the command again if you still need help.',
         invalid_form_body: 'Discord rejected the request payload. Try again with different input.'
     },
+
     [ErrorTypes.USER_INPUT]: {
         default: 'There was a problem with your request. Check your input and try again.',
         invalid_user: 'I could not find that user. Check the mention or ID and try again.',
         invalid_channel: 'I could not find that channel. Check the mention or ID and try again.'
     },
+
     [ErrorTypes.RATE_LIMIT]: {
         default: "You're doing that too quickly. Wait a moment and try again.",
         command_cooldown: 'This command is on cooldown. Wait before using it again.',
         global_rate_limit: 'Discord is rate limiting requests. Wait a moment and try again.'
     },
+
     [ErrorTypes.UNKNOWN]: {
         default: 'Something went wrong. Please try again in a moment.',
         unexpected: 'An unexpected error occurred. Please try again later.',
@@ -309,9 +364,11 @@ export function getUserMessage(error, context = {}) {
         if (error?.code === 10062) {
             return messages.interaction_expired;
         }
+
         if (error?.code === 40060 || error?.code === 50027) {
             return messages.already_acknowledged;
         }
+
         if (error?.code === 50035) {
             return messages.invalid_form_body;
         }
@@ -321,7 +378,10 @@ export function getUserMessage(error, context = {}) {
         return messages[context.subtype];
     }
 
-    if (context.subtype && UserMessages[ErrorTypes.UNKNOWN][context.subtype]) {
+    if (
+        context.subtype &&
+        UserMessages[ErrorTypes.UNKNOWN][context.subtype]
+    ) {
         return UserMessages[ErrorTypes.UNKNOWN][context.subtype];
     }
 
@@ -329,9 +389,19 @@ export function getUserMessage(error, context = {}) {
 }
 
 function buildErrorLogData(interaction, error, errorType, context = {}) {
-    const resolvedErrorCode = resolveErrorCode({ error, errorType, context });
+    const resolvedErrorCode = resolveErrorCode({
+        error,
+        errorType,
+        context
+    });
+
     const errorMetadata = getErrorMetadata(resolvedErrorCode);
-    const traceId = context.traceId || interaction?.traceContext?.traceId || interaction?.traceId || error?.context?.traceId;
+
+    const traceId =
+        context.traceId ||
+        interaction?.traceContext?.traceId ||
+        interaction?.traceId ||
+        error?.context?.traceId;
 
     return {
         logData: {
@@ -346,16 +416,21 @@ function buildErrorLogData(interaction, error, errorType, context = {}) {
             guildId: interaction?.guildId,
             userId: interaction?.user?.id,
             command: interaction?.commandName || context.command,
-            interaction: interaction ? {
-                type: interaction.type,
-                commandName: interaction.commandName,
-                customId: interaction.customId,
-                userId: interaction.user?.id,
-                guildId: interaction.guildId,
-                channelId: interaction.channelId
-            } : undefined,
+
+            interaction: interaction
+                ? {
+                    type: interaction.type,
+                    commandName: interaction.commandName,
+                    customId: interaction.customId,
+                    userId: interaction.user?.id,
+                    guildId: interaction.guildId,
+                    channelId: interaction.channelId
+                }
+                : undefined,
+
             context
         },
+
         traceId,
         resolvedErrorCode,
         errorMetadata
@@ -364,51 +439,77 @@ function buildErrorLogData(interaction, error, errorType, context = {}) {
 
 function logInteractionError(error, errorType, logData) {
     const isUserError = USER_ERROR_TYPES.has(errorType);
-    const isExpectedError = Boolean(error?.context?.expected === true || error?.context?.suppressErrorLog === true);
+
+    const isExpectedError = Boolean(
+        error?.context?.expected === true ||
+        error?.context?.suppressErrorLog === true
+    );
 
     if (isUserError || isExpectedError) {
         if (errorType !== ErrorTypes.RATE_LIMIT) {
-            logger.debug(`User Error [${errorType.toUpperCase()}]: ${error.userMessage || error.message}`, logData);
+            logger.debug(
+                `User Error [${errorType.toUpperCase()}]: ${error.userMessage || error.message}`,
+                logData
+            );
         }
     } else {
-        logger.error(`System Error [${errorType.toUpperCase()}]`, {
-            ...logData,
-            stack: error.stack
-        });
+        logger.error(
+            `System Error [${errorType.toUpperCase()}]`,
+            {
+                ...logData,
+                stack: error.stack
+            }
+        );
     }
 }
 
 async function sendErrorResponse(interaction, embed, context = {}) {
     try {
         if (!interaction || !interaction.id) {
-            logger.warn('Interaction was null or invalid when handling error', {
-                event: 'interaction.error.invalid_interaction',
-                errorCode: ErrorCodes.INTERACTION_INVALID,
-                remediationHint: getErrorMetadata(ErrorCodes.INTERACTION_INVALID).remediation,
-                traceId: context.traceId
-            });
+            logger.warn(
+                'Interaction was null or invalid when handling error',
+                {
+                    event: 'interaction.error.invalid_interaction',
+                    errorCode: ErrorCodes.INTERACTION_INVALID,
+                    remediationHint:
+                        getErrorMetadata(ErrorCodes.INTERACTION_INVALID).remediation,
+                    traceId: context.traceId
+                }
+            );
+
             return false;
         }
 
         const coordinator = InteractionHelper.getCoordinator(interaction);
+
         if (coordinator?.isUsageFinalized()) {
             return false;
         }
 
-        if (interaction.createdTimestamp && (Date.now() - interaction.createdTimestamp) > 14 * 60 * 1000) {
-            logger.warn('Interaction expired before error handler could send response', {
-                event: 'interaction.error.expired',
-                errorCode: ErrorCodes.INTERACTION_EXPIRED,
-                remediationHint: getErrorMetadata(ErrorCodes.INTERACTION_EXPIRED).remediation,
-                traceId: context.traceId,
-                guildId: interaction.guildId,
-                userId: interaction.user?.id,
-                command: interaction.commandName || context.command
-            });
+        if (
+            interaction.createdTimestamp &&
+            (Date.now() - interaction.createdTimestamp) > 14 * 60 * 1000
+        ) {
+            logger.warn(
+                'Interaction expired before error handler could send response',
+                {
+                    event: 'interaction.error.expired',
+                    errorCode: ErrorCodes.INTERACTION_EXPIRED,
+                    remediationHint:
+                        getErrorMetadata(ErrorCodes.INTERACTION_EXPIRED).remediation,
+                    traceId: context.traceId,
+                    guildId: interaction.guildId,
+                    userId: interaction.user?.id,
+                    command: interaction.commandName || context.command
+                }
+            );
+
             return false;
         }
 
-        const errorMessage = { embeds: [embed] };
+        const errorMessage = {
+            embeds: [embed]
+        };
 
         if (interaction._isPrefixCommand) {
             if (coordinator?.hasResponded()) {
@@ -416,6 +517,7 @@ async function sendErrorResponse(interaction, embed, context = {}) {
             } else {
                 await coordinator?.respond(errorMessage);
             }
+
             return true;
         }
 
@@ -423,71 +525,155 @@ async function sendErrorResponse(interaction, embed, context = {}) {
 
         if (interaction.replied) {
             // A visible reply already exists; don't overwrite it — follow up ephemerally.
-            await interaction.followUp({ ...errorMessage, flags: MessageFlags.Ephemeral });
+            await interaction.followUp({
+                ...errorMessage,
+                flags: MessageFlags.Ephemeral
+            });
         } else if (interaction.deferred) {
             await interaction.editReply(errorMessage);
         } else {
             if (useEphemeral) {
                 errorMessage.flags = MessageFlags.Ephemeral;
             }
+
             await interaction.reply(errorMessage);
         }
 
+        // حذف رسالة الـ Cooldown تلقائياً بعد المدة المحددة
+        if (context.deleteAfterMs) {
+            setTimeout(async () => {
+                try {
+                    await interaction.deleteReply();
+                } catch (error) {
+                    // تجاهل الخطأ إذا كانت الرسالة قد حُذفت بالفعل
+                }
+            }, context.deleteAfterMs);
+        }
+
         return true;
+
     } catch (replyError) {
-        if (replyError.code === 40060 || replyError.code === 10062 || replyError.code === 50027) {
-            logger.warn('Interaction already acknowledged, expired, or token invalid; cannot send error response:', {
-                event: 'interaction.error.response_unavailable',
-                errorCode: String(replyError.code),
+        if (
+            replyError.code === 40060 ||
+            replyError.code === 10062 ||
+            replyError.code === 50027
+        ) {
+            logger.warn(
+                'Interaction already acknowledged, expired, or token invalid; cannot send error response:',
+                {
+                    event: 'interaction.error.response_unavailable',
+                    errorCode: String(replyError.code),
+                    traceId: context.traceId,
+                    guildId: interaction.guildId,
+                    userId: interaction.user?.id,
+                    command: interaction.commandName || context.command,
+                    code: replyError.code
+                }
+            );
+
+            return false;
+        }
+
+        logger.error(
+            'Failed to send error response:',
+            {
+                event: 'interaction.error.response_failed',
+                errorCode: String(
+                    replyError.code ||
+                    ErrorCodes.INTERACTION_RESPONSE_FAILED
+                ),
+                remediationHint:
+                    getErrorMetadata(
+                        ErrorCodes.INTERACTION_RESPONSE_FAILED
+                    ).remediation,
                 traceId: context.traceId,
                 guildId: interaction.guildId,
                 userId: interaction.user?.id,
                 command: interaction.commandName || context.command,
-                code: replyError.code
-            });
-            return false;
-        }
+                error: replyError
+            }
+        );
 
-        logger.error('Failed to send error response:', {
-            event: 'interaction.error.response_failed',
-            errorCode: String(replyError.code || ErrorCodes.INTERACTION_RESPONSE_FAILED),
-            remediationHint: getErrorMetadata(ErrorCodes.INTERACTION_RESPONSE_FAILED).remediation,
-            traceId: context.traceId,
-            guildId: interaction.guildId,
-            userId: interaction.user?.id,
-            command: interaction.commandName || context.command,
-            error: replyError
-        });
         return false;
     }
 }
 
 /**
- * Reply with a typed user-facing error (early-return validation, permission checks, etc.).
+ * Reply with a typed user-facing error
+ * (early-return validation, permission checks, etc.).
  */
-export async function replyUserError(interaction, {
-    type = ErrorTypes.UNKNOWN,
-    message,
-    subtype = null,
-    ephemeral = true,
-    context = {}
-} = {}) {
+export async function replyUserError(
+    interaction,
+    {
+        type = ErrorTypes.UNKNOWN,
+        message,
+        subtype = null,
+        ephemeral = true,
+        context = {}
+    } = {}
+) {
     const errorType = type || ErrorTypes.UNKNOWN;
+
     const syntheticError = message
-        ? createError('User error', errorType, message, { expected: true, ...context })
-        : createError('User error', errorType, null, { expected: true, ...context });
+        ? createError(
+            'User error',
+            errorType,
+            message,
+            {
+                expected: true,
+                ...context
+            }
+        )
+        : createError(
+            'User error',
+            errorType,
+            null,
+            {
+                expected: true,
+                ...context
+            }
+        );
 
-    const userMessage = getUserMessage(syntheticError, { subtype, ...context });
-    const { logData, traceId } = buildErrorLogData(interaction, syntheticError, errorType, {
-        ...context,
-        subtype,
-        source: context.source || 'replyUserError'
-    });
+    const userMessage = getUserMessage(
+        syntheticError,
+        {
+            subtype,
+            ...context
+        }
+    );
 
-    logInteractionError(syntheticError, errorType, logData);
+    const { logData, traceId } = buildErrorLogData(
+        interaction,
+        syntheticError,
+        errorType,
+        {
+            ...context,
+            subtype,
+            source: context.source || 'replyUserError'
+        }
+    );
 
-    const embed = buildUserErrorEmbed(errorType, userMessage);
-    return sendErrorResponse(interaction, embed, { ...context, traceId, ephemeral, subtype });
+    logInteractionError(
+        syntheticError,
+        errorType,
+        logData
+    );
+
+    const embed = buildUserErrorEmbed(
+        errorType,
+        userMessage
+    );
+
+    return sendErrorResponse(
+        interaction,
+        embed,
+        {
+            ...context,
+            traceId,
+            ephemeral,
+            subtype
+        }
+    );
 }
 
 const USER_ERROR_TYPES = new Set([
@@ -499,86 +685,196 @@ const USER_ERROR_TYPES = new Set([
 ]);
 
 function buildErrorReference(resolvedErrorCode, traceId) {
-    const shortTrace = traceId ? String(traceId).slice(0, 8) : null;
-    return shortTrace ? `${resolvedErrorCode} · ${shortTrace}` : resolvedErrorCode;
+    const shortTrace = traceId
+        ? String(traceId).slice(0, 8)
+        : null;
+
+    return shortTrace
+        ? `${resolvedErrorCode} · ${shortTrace}`
+        : resolvedErrorCode;
 }
 
-export async function handleInteractionError(interaction, error, context = {}) {
-    const normalizedError = normalizeInteractionError(error, context);
-    const errorType = categorizeError(normalizedError);
-    const userMessage = getUserMessage(normalizedError, context);
-    const { logData, traceId, resolvedErrorCode } = buildErrorLogData(interaction, normalizedError, errorType, context);
+export async function handleInteractionError(
+    interaction,
+    error,
+    context = {}
+) {
+    const normalizedError = normalizeInteractionError(
+        error,
+        context
+    );
 
-    logInteractionError(normalizedError, errorType, logData);
+    const errorType = categorizeError(
+        normalizedError
+    );
 
-    // System errors get a reference code so users can report them and we can grep logs.
-    const isUserError = USER_ERROR_TYPES.has(errorType) || normalizedError?.context?.expected === true;
+    const userMessage = getUserMessage(
+        normalizedError,
+        context
+    );
+
+    const {
+        logData,
+        traceId,
+        resolvedErrorCode
+    } = buildErrorLogData(
+        interaction,
+        normalizedError,
+        errorType,
+        context
+    );
+
+    logInteractionError(
+        normalizedError,
+        errorType,
+        logData
+    );
+
+    // System errors get a reference code so users can report them
+    // and we can grep logs.
+    const isUserError =
+        USER_ERROR_TYPES.has(errorType) ||
+        normalizedError?.context?.expected === true;
+
     const description = isUserError
         ? userMessage
-        : `${userMessage}\n\n-# Ref: \`${buildErrorReference(resolvedErrorCode, traceId)}\``;
+        : `${userMessage}\n\n-# Ref: \`${buildErrorReference(
+            resolvedErrorCode,
+            traceId
+        )}\``;
 
-    const embed = buildUserErrorEmbed(errorType, description);
-    await sendErrorResponse(interaction, embed, { ...context, traceId });
+    const embed = buildUserErrorEmbed(
+        errorType,
+        description
+    );
+
+    // رسائل الـ Cooldown فقط يتم حذفها بعد 5 ثواني
+    await sendErrorResponse(
+        interaction,
+        embed,
+        {
+            ...context,
+            traceId,
+            deleteAfterMs:
+                errorType === ErrorTypes.RATE_LIMIT
+                    ? 5000
+                    : undefined
+        }
+    );
 }
 
 /**
- * Central error handler for non-interaction contexts (cron jobs, timers, event
- * side-effects). Logs with the same structured fields as interaction errors.
+ * Central error handler for non-interaction contexts
+ * (cron jobs, timers, event side-effects).
+ * Logs with the same structured fields as interaction errors.
  */
-export function handleTaskError(taskName, error, context = {}) {
+export function handleTaskError(
+    taskName,
+    error,
+    context = {}
+) {
     const errorType = categorizeError(error);
-    const resolvedErrorCode = resolveErrorCode({ error, errorType, context });
-    const errorMetadata = getErrorMetadata(resolvedErrorCode);
 
-    logger.error(`Task Error [${taskName}] [${errorType.toUpperCase()}]`, {
-        event: 'task.error',
-        task: taskName,
-        errorCode: resolvedErrorCode || ErrorCodes.TASK_ERROR,
-        remediationHint: errorMetadata.remediation,
-        severity: errorMetadata.severity,
-        retryable: errorMetadata.retryable,
-        type: errorType,
-        error: error?.message || String(error),
-        stack: error?.stack,
+    const resolvedErrorCode = resolveErrorCode({
+        error,
+        errorType,
         context
     });
+
+    const errorMetadata = getErrorMetadata(
+        resolvedErrorCode
+    );
+
+    logger.error(
+        `Task Error [${taskName}] [${errorType.toUpperCase()}]`,
+        {
+            event: 'task.error',
+            task: taskName,
+            errorCode:
+                resolvedErrorCode ||
+                ErrorCodes.TASK_ERROR,
+            remediationHint:
+                errorMetadata.remediation,
+            severity:
+                errorMetadata.severity,
+            retryable:
+                errorMetadata.retryable,
+            type: errorType,
+            error:
+                error?.message ||
+                String(error),
+            stack:
+                error?.stack,
+            context
+        }
+    );
 }
 
 /**
  * Wrap a background task so it can never produce an unhandled rejection.
- * Usage: cron.schedule('* * * * *', runSafeTask('giveaways', () => checkGiveaways(client)))
+ * Usage:
+ * cron.schedule('* * * * *', runSafeTask('giveaways', () => checkGiveaways(client)))
  */
-export function runSafeTask(taskName, fn, context = {}) {
+export function runSafeTask(
+    taskName,
+    fn,
+    context = {}
+) {
     return async (...args) => {
         try {
             return await fn(...args);
         } catch (error) {
-            handleTaskError(taskName, error, context);
+            handleTaskError(
+                taskName,
+                error,
+                context
+            );
+
             return null;
         }
     };
 }
 
-export function withErrorHandling(fn, context = {}) {
+export function withErrorHandling(
+    fn,
+    context = {}
+) {
     return async (...args) => {
         try {
             return await fn(...args);
         } catch (error) {
-            const interaction = args.find((arg) =>
-                arg && typeof arg === 'object' &&
-                (arg.isCommand || arg.isButton || arg.isModalSubmit || arg.isStringSelectMenu || arg.isChatInputCommand || arg._isPrefixCommand)
+            const interaction = args.find(
+                (arg) =>
+                    arg &&
+                    typeof arg === 'object' &&
+                    (
+                        arg.isCommand ||
+                        arg.isButton ||
+                        arg.isModalSubmit ||
+                        arg.isStringSelectMenu ||
+                        arg.isChatInputCommand ||
+                        arg._isPrefixCommand
+                    )
             );
 
-            // Slash commands are handled by interactionCreate — re-throw so the
-            // central handler can attach trace context and command subtypes.
+            // Slash commands are handled by interactionCreate —
+            // re-throw so the central handler can attach trace context
+            // and command subtypes.
             if (interaction?.isChatInputCommand?.()) {
                 throw error;
             }
 
             if (interaction) {
-                await handleInteractionError(interaction, error, context);
+                await handleInteractionError(
+                    interaction,
+                    error,
+                    context
+                );
             } else {
-                logger.error('Error in non-interaction context:', error);
+                logger.error(
+                    'Error in non-interaction context:',
+                    error
+                );
             }
 
             return null;
@@ -586,13 +882,25 @@ export function withErrorHandling(fn, context = {}) {
     };
 }
 
-export function createError(message, type = ErrorTypes.UNKNOWN, userMessage = null, context = {}) {
+export function createError(
+    message,
+    type = ErrorTypes.UNKNOWN,
+    userMessage = null,
+    context = {}
+) {
     const normalizedContext = {
         ...context,
-        errorCode: context?.errorCode || getDefaultErrorCodeByType(type)
+        errorCode:
+            context?.errorCode ||
+            getDefaultErrorCodeByType(type)
     };
 
-    return new TitanBotError(message, type, userMessage, normalizedContext);
+    return new TitanBotError(
+        message,
+        type,
+        userMessage,
+        normalizedContext
+    );
 }
 
 export default {

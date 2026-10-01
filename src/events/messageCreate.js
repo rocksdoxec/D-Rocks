@@ -47,7 +47,7 @@ export default {
 async function handlePrefixCommand(message, client) {
   try {
     const guildConfig = await getGuildConfig(client, message.guild.id);
-    const prefix = guildConfig?.prefix || getCommandPrefix();
+    const prefix = '#';
     const parsed = parsePrefixCommand(message.content, prefix);
     
     if (!parsed) {

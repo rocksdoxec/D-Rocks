@@ -14,7 +14,7 @@ export default {
         .addIntegerOption((option) =>
             option
                 .setName("amount")
-                .setDescription("عدد الرسائل (1-100)")
+                .setDescription("عدد الرسائل (1-1000)")
                 .setRequired(true),
         )
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
@@ -29,10 +29,10 @@ export default {
         });
 
         if (!deferSuccess) {
-            logger.warn(`Purge interaction defer failed`, {
+            logger.warn(`Clear interaction defer failed`, {
                 userId: interaction.user.id,
                 guildId: interaction.guildId,
-                commandName: 'purge'
+                commandName: 'clear'
             });
             return;
         }
@@ -40,26 +40,51 @@ export default {
         const amount = interaction.options.getInteger("amount");
         const channel = interaction.channel;
 
-        if (amount < 1 || amount > 100) {
+        if (amount < 1 || amount > 1000) {
             return await replyUserError(interaction, {
                 type: ErrorTypes.VALIDATION,
-                message: 'يرجى تحديد رقم بين 1 و100.'
+                message: 'يرجى تحديد رقم بين 1 و1000.'
             });
         }
 
         try {
-            const fetched = await channel.messages.fetch({ limit: amount });
-            const deleted = await channel.bulkDelete(fetched, true);
-            const deletedCount = deleted.size;
+            let remaining = amount;
+            let deletedCount = 0;
+
+            while (remaining > 0) {
+                const batchSize = Math.min(remaining, 100);
+
+                const fetched = await channel.messages.fetch({
+                    limit: batchSize
+                });
+
+                if (fetched.size === 0) {
+                    break;
+                }
+
+                const deleted = await channel.bulkDelete(fetched, true);
+                deletedCount += deleted.size;
+                remaining -= deleted.size;
+
+                // إذا لم يتم حذف أي رسالة، نتوقف حتى لا ندخل في حلقة لا نهائية
+                if (deleted.size === 0) {
+                    break;
+                }
+
+                // توقف بسيط بين الدفعات لتجنب الضغط على Discord API
+                if (remaining > 0) {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+            }
 
             await logEvent({
                 client,
                 guild: interaction.guild,
                 event: {
-                    action: "Messages Purged",
+                    action: "Messages Cleared",
                     target: `${channel} (${deletedCount} messages)`,
                     executor: `${interaction.user.tag} (${interaction.user.id})`,
-                    reason: `Deleted ${deletedCount} messages`,
+                    reason: `Cleared ${deletedCount} messages`,
                     metadata: {
                         channelId: channel.id,
                         messageCount: deletedCount,
@@ -82,12 +107,12 @@ export default {
             // حذف رسالة النجاح تلقائياً بعد 3 ثواني
             setTimeout(() => {
                 interaction.deleteReply().catch(err =>
-                    logger.debug('Failed to auto-delete purge response:', err)
+                    logger.debug('Failed to auto-delete clear response:', err)
                 );
             }, 3000);
 
         } catch (error) {
-            logger.error('Purge command error:', error);
+            logger.error('Clear command error:', error);
 
             await replyUserError(interaction, {
                 type: ErrorTypes.UNKNOWN,

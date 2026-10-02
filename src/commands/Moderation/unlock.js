@@ -1,11 +1,26 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
-import { createEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
+import {
+    SlashCommandBuilder,
+    PermissionFlagsBits,
+    PermissionsBitField,
+    ChannelType
+} from 'discord.js';
+
+import {
+    createEmbed,
+    successEmbed,
+    infoEmbed,
+    warningEmbed
+} from '../../utils/embeds.js';
+
 import { logEvent } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { getColor } from '../../config/bot.js';
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
-import { replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
+import {
+    replyUserError,
+    ErrorTypes
+} from '../../utils/errorHandler.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -13,12 +28,15 @@ export default {
         .setDescription(
             "فتح القناة الحالية والسماح للأعضاء بإرسال الرسائل مرة أخرى."
         )
-        .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
+        .setDefaultMemberPermissions(
+            PermissionFlagsBits.ManageChannels
+        ),
 
     category: "moderation",
 
     async execute(interaction, config, client) {
-        const deferSuccess = await InteractionHelper.safeDefer(interaction);
+        const deferSuccess =
+            await InteractionHelper.safeDefer(interaction);
 
         if (!deferSuccess) {
             logger.warn(`Unlock interaction defer failed`, {
@@ -30,19 +48,32 @@ export default {
         }
 
         const channel = interaction.channel;
-        const everyoneRole = interaction.guild.roles.everyone;
+        const everyoneRole =
+            interaction.guild.roles.everyone;
 
         try {
-            const currentPermissions = channel.permissionsFor(everyoneRole);
+            const currentPermissions =
+                channel.permissionsFor(everyoneRole);
 
             if (
-                currentPermissions.has(PermissionFlagsBits.SendMessages) === true ||
-                currentPermissions.has(PermissionFlagsBits.SendMessages) === null
+                currentPermissions.has(
+                    PermissionFlagsBits.SendMessages
+                ) === true ||
+                currentPermissions.has(
+                    PermissionFlagsBits.SendMessages
+                ) === null
             ) {
-                return await replyUserError(interaction, {
+                await replyUserError(interaction, {
                     type: ErrorTypes.UNKNOWN,
-                    message: `${channel} مفتوحة بالفعل ويمكن للأعضاء إرسال الرسائل.`
+                    message:
+                        `${channel} مفتوحة بالفعل ويمكن للأعضاء إرسال الرسائل.`
                 });
+
+                setTimeout(() => {
+                    interaction.deleteReply().catch(() => {});
+                }, 5000);
+
+                return;
             }
 
             await channel.permissionOverwrites.edit(
@@ -50,8 +81,9 @@ export default {
                 { SendMessages: true },
                 {
                     type: 0,
-                    reason: `Channel unlocked by ${interaction.user.tag}`,
-                },
+                    reason:
+                        `Channel unlocked by ${interaction.user.tag}`
+                }
             );
 
             await logEvent({
@@ -60,26 +92,43 @@ export default {
                 event: {
                     action: "Channel Unlocked",
                     target: channel.toString(),
-                    executor: `${interaction.user.tag} (${interaction.user.id})`,
+                    executor:
+                        `${interaction.user.tag} (${interaction.user.id})`,
                     metadata: {
                         channelId: channel.id,
-                        category: channel.parent?.name || 'None'
+                        category:
+                            channel.parent?.name || 'None'
                     }
                 }
             });
 
-            // رسالة عادية بدل Embed
-            await InteractionHelper.safeEditReply(interaction, {
-                content: `🔓 **تم فتح القناة**\n${channel}`,
-            });
+            await InteractionHelper.safeEditReply(
+                interaction,
+                {
+                    content:
+                        `🔓 **تم فتح القناة**\n${channel}`
+                }
+            );
+
+            setTimeout(() => {
+                interaction.deleteReply().catch(() => {});
+            }, 5000);
 
         } catch (error) {
-            logger.error('Unlock command error:', error);
+            logger.error(
+                'Unlock command error:',
+                error
+            );
 
             await replyUserError(interaction, {
                 type: ErrorTypes.PERMISSION,
-                message: 'حدث خطأ أثناء محاولة فتح القناة. تأكد من أن لدي صلاحية **إدارة القنوات (Manage Channels)**.'
+                message:
+                    'حدث خطأ أثناء محاولة فتح القناة. تأكد من أن لدي صلاحية **إدارة القنوات (Manage Channels)**.'
             });
+
+            setTimeout(() => {
+                interaction.deleteReply().catch(() => {});
+            }, 5000);
         }
     }
 };

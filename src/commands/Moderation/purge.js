@@ -9,7 +9,7 @@ import { replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
 
 export default {
     data: new SlashCommandBuilder()
-        .setName("purge")
+        .setName("clear")
         .setDescription("حذف عدد محدد من الرسائل")
         .addIntegerOption((option) =>
             option

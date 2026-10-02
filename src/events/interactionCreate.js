@@ -17,7 +17,6 @@ import { isCommandEnabled } from '../services/commandAccessService.js';
 import { resolveSlashAccessKey } from '../utils/messageAdapter.js';
 import { isCollectorManagedComponent } from '../utils/collectorComponents.js';
 import { ResponseCoordinator } from '../utils/responseCoordinator.js';
-import { enforceDefaultCommandPermissions } from '../utils/permissionGuard.js';
 
 const COMMAND_ERROR_SUBTYPES = {
   warn: 'warn_failed',

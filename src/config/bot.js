@@ -433,15 +433,16 @@ export const botConfig = {
   // =========================
   // GENERIC BOT MESSAGES
   // =========================
-  messages: {
-    noPermission: "You do not have permission to use this command.",
-    cooldownActive: "Please wait {time} before using this command again.",
-    errorOccurred: "An error occurred while executing this command.",
-    missingPermissions:
-      "I am missing required permissions to perform this action.",
-    commandDisabled: "This command has been disabled.",
-    maintenanceMode: "The bot is currently in maintenance mode.",
-  },
+messages: {
+  noPermission: "ليس لديك صلاحية لاستخدام هذا الأمر.",
+  cooldownActive:
+    "هذا الأمر في فترة انتظار. يرجى الانتظار {time} قبل استخدامه مرة أخرى.",
+  errorOccurred: "حدث خطأ أثناء تنفيذ هذا الأمر.",
+  missingPermissions:
+    "ليس لدي الصلاحيات المطلوبة لتنفيذ هذا الإجراء.",
+  commandDisabled: "تم تعطيل هذا الأمر.",
+  maintenanceMode: "البوت حاليًا في وضع الصيانة.",
+},
 
   // =========================
   // FEATURE TOGGLES

@@ -330,11 +330,11 @@ const UserMessages = {
         invalid_channel: 'I could not find that channel. Check the mention or ID and try again.'
     },
 
-    [ErrorTypes.RATE_LIMIT]: {
-        default: "You're doing that too quickly. Wait a moment and try again.",
-        command_cooldown: 'This command is on cooldown. Wait before using it again.',
-        global_rate_limit: 'Discord is rate limiting requests. Wait a moment and try again.'
-    },
+  [ErrorTypes.RATE_LIMIT]: {
+    default: "أنت تستخدم الأوامر بسرعة كبيرة. يرجى الانتظار قليلًا والمحاولة مرة أخرى.",
+    command_cooldown: "هذا الأمر في فترة انتظار. يرجى الانتظار {time} قبل استخدامه مرة أخرى.",
+    global_rate_limit: "Discord يفرض حدًا على الطلبات حاليًا. يرجى الانتظار قليلًا والمحاولة مرة أخرى."
+},
 
     [ErrorTypes.UNKNOWN]: {
         default: 'Something went wrong. Please try again in a moment.',

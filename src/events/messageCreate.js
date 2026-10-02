@@ -122,21 +122,33 @@ async function handlePrefixCommand(message, client) {
       guildId: message.guild.id,
       user: message.author,
     };
-    const abuseProtection = await enforceAbuseProtection(
-      mockInteractionForProtection,
-      command,
-      resolvedCommandName,
-    );
-    if (!abuseProtection.allowed) {
-      const formattedCooldown = formatCooldownDuration(abuseProtection.remainingMs);
-      const embed = createEmbed({
+const abuseProtection = await enforceAbuseProtection(
+    mockInteractionForProtection,
+    command,
+    resolvedCommandName,
+);
+
+if (!abuseProtection.allowed) {
+    const formattedCooldown = formatCooldownDuration(abuseProtection.remainingMs);
+
+    const embed = createEmbed({
         title: 'Command Cooldown',
         description: `This command is on cooldown. Please wait ${formattedCooldown} before trying again.`,
         color: 'error',
-      });
-      await message.channel.send({ embeds: [embed] }).catch(() => {});
-      return;
+    });
+
+    const cooldownMessage = await message.channel.send({
+        embeds: [embed]
+    }).catch(() => null);
+
+    if (cooldownMessage) {
+        setTimeout(() => {
+            cooldownMessage.delete().catch(() => {});
+        }, 5000);
     }
+
+    return;
+}
 
     logger.info(`Executing prefix command: ${prefix}${commandName} (resolved to ${resolvedCommandName}) by ${message.author.tag}`);
     

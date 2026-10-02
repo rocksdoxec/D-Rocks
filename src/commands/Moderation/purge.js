@@ -21,7 +21,7 @@ export default {
 
     category: "moderation",
 
-    abuseProtection: { maxAttempts: 5, windowMs: 60_000 },
+   abuseProtection: { maxAttempts: 1, windowMs: 3_000 },
 
     async execute(interaction, config, client) {
         const deferSuccess = await InteractionHelper.safeDefer(interaction, {

@@ -235,15 +235,15 @@ const NOTIFICATION_DEFAULT_TITLES = {
 };
 
 export const USER_ERROR_TITLES = {
-  validation: 'Invalid Input',
-  permission: 'Permission Denied',
-  configuration: 'Configuration Error',
-  database: 'Database Error',
-  network: 'Network Error',
-  discord_api: 'Discord API Error',
-  user_input: 'Input Error',
-  rate_limit: 'Too Fast',
-  unknown: 'Something Went Wrong',
+  validation: 'إدخال غير صالح',
+  permission: 'تم رفض الصلاحية',
+  configuration: 'خطأ في الإعدادات',
+  database: 'خطأ في قاعدة البيانات',
+  network: 'خطأ في الشبكة',
+  discord_api: 'خطأ في Discord',
+  user_input: 'خطأ في الإدخال',
+  rate_limit: 'فترة انتظار',
+  unknown: 'حدث خطأ',
 };
 
 const USER_ERROR_COLORS = {

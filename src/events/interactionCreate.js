@@ -135,63 +135,6 @@ export default {
                 );
               }
 
-              // Cooldown لجميع أوامر Slash
-              // المدة يتم أخذها من bot.js
-              const defaultCooldownSec =
-                Number(
-                  botConfig.commands?.defaultCooldown
-                ) || 0;
-
-              if (
-                defaultCooldownSec > 0 &&
-                !isBotOwner(interaction.user.id)
-              ) {
-                const cooldownKey =
-                  `${interaction.user.id}:${interaction.commandName}`;
-
-                const expiresAt =
-                  client.cooldowns.get(cooldownKey);
-
-                if (
-                  expiresAt &&
-                  Date.now() < expiresAt
-                ) {
-                  const remainingSec =
-                    Math.ceil(
-                      (expiresAt - Date.now()) / 1000
-                    );
-
-                  throw createError(
-                    `Default command cooldown active for ${interaction.commandName}`,
-                    ErrorTypes.RATE_LIMIT,
-                    getBotMessage(
-                      'cooldownActive',
-                      {
-                        time: `${remainingSec} ثانية`
-                      }
-                    ),
-                    withTraceContext(
-                      {
-                        commandName:
-                          interaction.commandName,
-                        remainingSec,
-                        subtype:
-                          'command_cooldown',
-                        expected: true,
-                        deleteAfterMs: 5000
-                      },
-                      interactionTraceContext
-                    )
-                  );
-                }
-
-                client.cooldowns.set(
-                  cooldownKey,
-                  Date.now() +
-                    defaultCooldownSec * 1000
-                );
-              }
-
               let guildConfig = null;
 
               if (interaction.guild) {

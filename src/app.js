@@ -26,18 +26,16 @@ import { EXPECTED_SCHEMA_VERSION, EXPECTED_SCHEMA_LABEL } from './config/databas
 class TitanBot extends Client {
   constructor() {
     super({
+      partials: [Partials.Channel],
+      
       intents: [
-        
         GatewayIntentBits.Guilds,                        
         GatewayIntentBits.GuildMembers,                 
-
         GatewayIntentBits.GuildMessages,                
         GatewayIntentBits.GuildMessageReactions,        
         GatewayIntentBits.MessageContent,               
         GatewayIntentBits.DirectMessages,
-
         GatewayIntentBits.GuildVoiceStates,             
-
         GatewayIntentBits.GuildBans,                    
       ],
     });

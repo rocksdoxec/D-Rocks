@@ -1,3 +1,4 @@
+```js
 import {
     SlashCommandBuilder,
     PermissionFlagsBits,
@@ -16,13 +17,20 @@ const TEXT_CHANNEL_TYPES = [
     ChannelType.GuildAnnouncement,
 ];
 
+// Discord User ID الخاص بك
+const OWNER_ID = '617895141490819082';
+
 function resolveTargetChannel(interaction) {
     const selected = interaction.options.getChannel('channel');
+
     if (selected) {
         return selected;
     }
 
-    if (!interaction.channel || !TEXT_CHANNEL_TYPES.includes(interaction.channel.type)) {
+    if (
+        !interaction.channel ||
+        !TEXT_CHANNEL_TYPES.includes(interaction.channel.type)
+    ) {
         return null;
     }
 
@@ -32,30 +40,46 @@ function resolveTargetChannel(interaction) {
 export default {
     data: new SlashCommandBuilder()
         .setName('say')
-        .setDescription('Send a plain message as the bot')
+        .setDescription('إرسال رسالة نصية بواسطة البوت')
         .addStringOption((option) =>
             option
                 .setName('message')
-                .setDescription('The message the bot should send')
+                .setDescription('الرسالة التي سيقوم البوت بإرسالها')
                 .setRequired(true)
                 .setMaxLength(2000),
         )
         .addChannelOption((option) =>
             option
                 .setName('channel')
-                .setDescription('Channel to send in (defaults to the current channel)')
+                .setDescription(
+                    'القناة التي سيتم إرسال الرسالة فيها، افتراضيًا القناة الحالية',
+                )
                 .addChannelTypes(...TEXT_CHANNEL_TYPES)
                 .setRequired(false),
         )
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
         .setDMPermission(false),
+
     category: 'moderation',
-    abuseProtection: { maxAttempts: 8, windowMs: 60_000 },
+    abuseProtection: {
+        maxAttempts: 8,
+        windowMs: 60_000,
+    },
 
     async execute(interaction, _config, client) {
+
+        // هذا الأمر متاح لك فقط
+        if (interaction.user.id !== OWNER_ID) {
+            return interaction.reply({
+                content: '❌ ليس لديك صلاحية استخدام هذا الأمر.',
+                flags: MessageFlags.Ephemeral,
+            });
+        }
+
         const deferSuccess = await InteractionHelper.safeDefer(interaction, {
             flags: MessageFlags.Ephemeral,
         });
+
         if (!deferSuccess) {
             logger.warn('Say interaction defer failed', {
                 userId: interaction.user.id,
@@ -71,36 +95,41 @@ export default {
         if (!message) {
             return replyUserError(interaction, {
                 type: ErrorTypes.VALIDATION,
-                message: 'Message cannot be empty.',
+                message: 'لا يمكن أن تكون الرسالة فارغة.',
             });
         }
 
         const channel = resolveTargetChannel(interaction);
+
         if (!channel) {
             return replyUserError(interaction, {
                 type: ErrorTypes.VALIDATION,
-                message: 'Choose a text channel or run this command in one.',
+                message: 'اختر قناة نصية أو استخدم الأمر داخل قناة نصية.',
             });
         }
 
         const memberPermissions = channel.permissionsFor(interaction.member);
-        const botPermissions = channel.permissionsFor(interaction.guild.members.me);
+        const botPermissions = channel.permissionsFor(
+            interaction.guild.members.me,
+        );
 
         if (!memberPermissions?.has(PermissionFlagsBits.SendMessages)) {
             return replyUserError(interaction, {
                 type: ErrorTypes.PERMISSION,
-                message: `You do not have permission to send messages in ${channel}.`,
+                message: `ليس لديك صلاحية إرسال رسائل في ${channel}.`,
             });
         }
 
         if (!botPermissions?.has(PermissionFlagsBits.SendMessages)) {
             return replyUserError(interaction, {
                 type: ErrorTypes.PERMISSION,
-                message: `I do not have permission to send messages in ${channel}.`,
+                message: `ليس لدي صلاحية إرسال رسائل في ${channel}.`,
             });
         }
 
-        const sentMessage = await channel.send({ content: message });
+        const sentMessage = await channel.send({
+            content: message,
+        });
 
         await logEvent({
             client,
@@ -109,9 +138,10 @@ export default {
                 action: 'Bot Message Sent',
                 target: `${channel} (${channel.id})`,
                 executor: `${interaction.user.tag} (${interaction.user.id})`,
-                reason: message.length > 200
-                    ? `${message.slice(0, 197)}...`
-                    : message,
+                reason:
+                    message.length > 200
+                        ? `${message.slice(0, 197)}...`
+                        : message,
                 metadata: {
                     channelId: channel.id,
                     messageId: sentMessage.id,
@@ -124,11 +154,14 @@ export default {
         await InteractionHelper.safeEditReply(interaction, {
             embeds: [
                 successEmbed(
-                    'Message Sent',
-                    `Posted in ${channel}. [Jump to message](${sentMessage.url})`,
+                    'تم إرسال الرسالة',
+                    `تم إرسال الرسالة في ${channel}. [الانتقال إلى الرسالة](${sentMessage.url})`,
                 ),
             ],
             flags: MessageFlags.Ephemeral,
         });
     },
 };
+```
+
+استبدل الملف الحالي بهذا الكود، ثم **أعد تشغيل البوت**. لا تحتاج لتعديل `OWNER_ID`؛ تم وضع ID الخاص بك بالفعل.

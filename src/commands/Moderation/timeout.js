@@ -18,23 +18,25 @@ const durationChoices = [
 export default {
     data: new SlashCommandBuilder()
         .setName("timeout")
-        .setDescription("Timeout a user for a specific duration.")
+        .setDescription("تطبيق تايم أوت على عضو لمدة محددة")
         .addUserOption((option) =>
             option
                 .setName("target")
-                .setDescription("User to timeout")
+                .setDescription("العضو الذي تريد إعطاؤه تايم أوت")
                 .setRequired(true),
         )
         .addIntegerOption(
             (option) =>
                 option
                     .setName("duration")
-                    .setDescription("Duration of the timeout")
+                    .setDescription("مدة التايم أوت")
                     .setRequired(true)
                     .addChoices(...durationChoices),
         )
         .addStringOption((option) =>
-            option.setName("reason").setDescription("Reason for the timeout"),
+            option
+                .setName("reason")
+                .setDescription("سبب إعطاء التايم أوت"),
         )
         .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
     category: "moderation",
@@ -53,13 +55,13 @@ export default {
         const targetUser = interaction.options.getUser("target");
         const member = interaction.options.getMember("target");
         const durationMinutes = interaction.options.getInteger("duration");
-        const reason = interaction.options.getString("reason") || "No reason provided";
+        const reason = interaction.options.getString("reason") || "لم يتم تحديد سبب";
 
         if (!targetUser) {
             throw new TitanBotError(
                 'Missing target user',
                 ErrorTypes.USER_INPUT,
-                'You must specify a user to timeout.',
+                'يجب عليك تحديد عضو لإعطائه تايم أوت.',
                 { subtype: 'invalid_user' },
             );
         }
@@ -68,25 +70,28 @@ export default {
             throw new TitanBotError(
                 "Cannot timeout self",
                 ErrorTypes.VALIDATION,
-                "You cannot timeout yourself.",
+                "لا يمكنك إعطاء نفسك تايم أوت.",
             );
         }
+
         if (targetUser.id === client.user.id) {
             throw new TitanBotError(
                 "Cannot timeout bot",
                 ErrorTypes.VALIDATION,
-                "You cannot timeout the bot.",
+                "لا يمكنك إعطاء البوت تايم أوت.",
             );
         }
+
         if (!member) {
             throw new TitanBotError(
                 "Target not found",
                 ErrorTypes.USER_INPUT,
-                "The target user is not currently in this server.",
+                "العضو المحدد غير موجود حالياً في هذا السيرفر.",
             );
         }
 
         const durationMs = durationMinutes * 60 * 1000;
+
         const result = await ModerationService.timeoutUser({
             guild: interaction.guild,
             member,
@@ -102,8 +107,8 @@ export default {
         await InteractionHelper.safeEditReply(interaction, {
             embeds: [
                 successEmbed(
-                    `⏳ **Timed out** ${targetUser.tag} for ${durationDisplay}.`,
-                    `**Reason:** ${reason}\n**Case ID:** #${result.caseId}`,
+                    `⏳ **تم إعطاء ${targetUser.tag} تايم أوت لمدة ${durationDisplay}.**`,
+                    `**السبب:** ${reason}\n**رقم الحالة:** #${result.caseId}`,
                 ),
             ],
         });

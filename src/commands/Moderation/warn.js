@@ -6,21 +6,22 @@ import { WarningService } from '../../services/moderation/warningService.js';
 import { ModerationService } from '../../services/moderation/moderationService.js';
 import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+
 export default {
     data: new SlashCommandBuilder()
         .setName("warn")
-        .setDescription("Warn a user")
+        .setDescription("تحذير عضو")
         .addUserOption((o) =>
             o
                 .setName("target")
                 .setRequired(true)
-                .setDescription("User to warn"),
+                .setDescription("العضو الذي تريد تحذيره"),
         )
         .addStringOption((o) =>
             o
                 .setName("reason")
                 .setRequired(true)
-                .setDescription("Reason for the warning"),
+                .setDescription("سبب التحذير"),
         )
         .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
     category: "moderation",
@@ -46,7 +47,7 @@ export default {
             throw new TitanBotError(
                 'Missing target user',
                 ErrorTypes.USER_INPUT,
-                'You must specify a user to warn.',
+                'يجب عليك تحديد العضو الذي تريد تحذيره.',
                 { subtype: 'invalid_user' },
             );
         }
@@ -55,7 +56,7 @@ export default {
             throw new TitanBotError(
                 'Missing warning reason',
                 ErrorTypes.VALIDATION,
-                'You must provide a reason for the warning.',
+                'يجب عليك كتابة سبب للتحذير.',
                 { subtype: 'missing_required' },
             );
         }
@@ -64,7 +65,7 @@ export default {
             throw new TitanBotError(
                 "Target not found",
                 ErrorTypes.USER_INPUT,
-                "The target user is not currently in this server."
+                "هذا العضو غير موجود حاليًا في السيرفر."
             );
         }
 
@@ -99,8 +100,8 @@ export default {
         await InteractionHelper.safeEditReply(interaction, {
             embeds: [
                 successEmbed(
-                    `⚠️ **Warned** ${target.tag}`,
-                    `**Reason:** ${reason}\n**Total Warns:** ${totalCount}`,
+                    `⚠️ **تم تحذير** ${target.tag}`,
+                    `**السبب:** ${reason}\n**إجمالي التحذيرات:** ${totalCount}`,
                 ),
             ],
         });

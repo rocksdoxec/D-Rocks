@@ -507,9 +507,10 @@ async function sendErrorResponse(interaction, embed, context = {}) {
             return false;
         }
 
-        const errorMessage = {
-            embeds: [embed]
-        };
+const errorMessage =
+    context.plainMessage
+        ? { content: context.plainMessage }
+        : { embeds: [embed] };
 
         if (interaction._isPrefixCommand) {
             if (coordinator?.hasResponded()) {

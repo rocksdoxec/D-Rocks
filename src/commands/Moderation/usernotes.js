@@ -9,7 +9,7 @@ import { replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
 
 export default {
     data: new SlashCommandBuilder()
-        .setName("usernotes")
+        ..setName("usernotes_disabled")
         .setDescription("إدارة ملاحظات الأعضاء لأغراض الإشراف")
         .addSubcommand(subcommand =>
             subcommand

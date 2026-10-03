@@ -34,6 +34,12 @@ export default {
   name: Events.MessageCreate,
 
   async execute(message, client) {
+    console.log('🔥 MESSAGE CREATE FIRED:', {
+  dm: !message.guild,
+  author: message.author?.tag,
+  content: message.content
+});
+    
     try {
       // تجاهل رسائل البوتات
       if (message.author.bot) return;

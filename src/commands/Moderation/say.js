@@ -1,4 +1,3 @@
-```js
 import {
     SlashCommandBuilder,
     PermissionFlagsBits,
@@ -17,8 +16,8 @@ const TEXT_CHANNEL_TYPES = [
     ChannelType.GuildAnnouncement,
 ];
 
-// Discord User ID الخاص بك
-const OWNER_ID = '617895141490819082';
+// ضع Discord User ID الخاص بك هنا
+const OWNER_ID = 'YOUR_USER_ID';
 
 function resolveTargetChannel(interaction) {
     const selected = interaction.options.getChannel('channel');
@@ -27,10 +26,7 @@ function resolveTargetChannel(interaction) {
         return selected;
     }
 
-    if (
-        !interaction.channel ||
-        !TEXT_CHANNEL_TYPES.includes(interaction.channel.type)
-    ) {
+    if (!interaction.channel || !TEXT_CHANNEL_TYPES.includes(interaction.channel.type)) {
         return null;
     }
 
@@ -51,9 +47,7 @@ export default {
         .addChannelOption((option) =>
             option
                 .setName('channel')
-                .setDescription(
-                    'القناة التي سيتم إرسال الرسالة فيها، افتراضيًا القناة الحالية',
-                )
+                .setDescription('القناة التي سيتم إرسال الرسالة فيها، افتراضيًا القناة الحالية')
                 .addChannelTypes(...TEXT_CHANNEL_TYPES)
                 .setRequired(false),
         )
@@ -61,14 +55,11 @@ export default {
         .setDMPermission(false),
 
     category: 'moderation',
-    abuseProtection: {
-        maxAttempts: 8,
-        windowMs: 60_000,
-    },
+    abuseProtection: { maxAttempts: 8, windowMs: 60_000 },
 
     async execute(interaction, _config, client) {
 
-        // هذا الأمر متاح لك فقط
+        // السماح لك فقط باستخدام الأمر
         if (interaction.user.id !== OWNER_ID) {
             return interaction.reply({
                 content: '❌ ليس لديك صلاحية استخدام هذا الأمر.',
@@ -109,9 +100,7 @@ export default {
         }
 
         const memberPermissions = channel.permissionsFor(interaction.member);
-        const botPermissions = channel.permissionsFor(
-            interaction.guild.members.me,
-        );
+        const botPermissions = channel.permissionsFor(interaction.guild.members.me);
 
         if (!memberPermissions?.has(PermissionFlagsBits.SendMessages)) {
             return replyUserError(interaction, {
@@ -138,10 +127,9 @@ export default {
                 action: 'Bot Message Sent',
                 target: `${channel} (${channel.id})`,
                 executor: `${interaction.user.tag} (${interaction.user.id})`,
-                reason:
-                    message.length > 200
-                        ? `${message.slice(0, 197)}...`
-                        : message,
+                reason: message.length > 200
+                    ? `${message.slice(0, 197)}...`
+                    : message,
                 metadata: {
                     channelId: channel.id,
                     messageId: sentMessage.id,
@@ -162,6 +150,3 @@ export default {
         });
     },
 };
-```
-
-استبدل الملف الحالي بهذا الكود، ثم **أعد تشغيل البوت**. لا تحتاج لتعديل `OWNER_ID`؛ تم وضع ID الخاص بك بالفعل.

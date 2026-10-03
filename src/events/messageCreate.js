@@ -39,11 +39,12 @@ export default {
       if (message.author.bot) return;
 
       // إذا كانت الرسالة DM
-      if (!message.guild) {
-        await handleDirectMessage(message, client);
-        return;
-      }
+if (!message.guild) {
+  console.log('📩 DM RECEIVED:', message.author.tag, message.content);
 
+  await handleDirectMessage(message, client);
+  return;
+}
       logger.debug(
         `Message received from ${message.author.tag}: ${message.content}`
       );

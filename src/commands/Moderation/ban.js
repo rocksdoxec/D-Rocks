@@ -21,7 +21,7 @@ export default {
     category: "moderation", 
  
     async execute(interaction, config, client) { 
-        const user = interaction.options.getUser("target"); 
+        const user = interaction.options.getUser("user"); 
         const reason = interaction.options.getString("reason") || "لم يتم تحديد سبب"; 
  
         if (!user) { 

@@ -1,10 +1,5 @@
-﻿import 'dotenv/config';
-import {
-  Client,
-  Collection,
-  GatewayIntentBits,
-  Partials,
-} from 'discord.js';
+import 'dotenv/config';
+import { Client, Collection, GatewayIntentBits } from 'discord.js';
 import { REST } from '@discordjs/rest';
 import express from 'express';
 import cron from 'node-cron';
@@ -26,16 +21,18 @@ import { EXPECTED_SCHEMA_VERSION, EXPECTED_SCHEMA_LABEL } from './config/databas
 class TitanBot extends Client {
   constructor() {
     super({
-      partials: [Partials.Channel],
-      
       intents: [
+        
         GatewayIntentBits.Guilds,                        
         GatewayIntentBits.GuildMembers,                 
+
         GatewayIntentBits.GuildMessages,                
         GatewayIntentBits.GuildMessageReactions,        
         GatewayIntentBits.MessageContent,               
         GatewayIntentBits.DirectMessages,
+
         GatewayIntentBits.GuildVoiceStates,             
+
         GatewayIntentBits.GuildBans,                    
       ],
     });

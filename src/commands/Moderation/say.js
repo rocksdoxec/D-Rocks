@@ -17,7 +17,7 @@ const TEXT_CHANNEL_TYPES = [
 ];
 
 // ضع Discord User ID الخاص بك هنا
-const OWNER_ID = 'YOUR_USER_ID';
+const OWNER_ID = '617895141490819082';
 
 function resolveTargetChannel(interaction) {
     const selected = interaction.options.getChannel('channel');
@@ -60,12 +60,12 @@ export default {
     async execute(interaction, _config, client) {
 
         // السماح لك فقط باستخدام الأمر
-        if (interaction.user.id !== OWNER_ID) {
-            return interaction.reply({
-                content: '❌ ليس لديك صلاحية استخدام هذا الأمر.',
-                flags: MessageFlags.Ephemeral,
-            });
-        }
+if (interaction.user.id !== OWNER_ID) {
+    return interaction.reply({
+        content: '❌ ليس لديك صلاحية استخدام هذا الأمر.',
+        flags: MessageFlags.Ephemeral,
+    });
+}
 
         const deferSuccess = await InteractionHelper.safeDefer(interaction, {
             flags: MessageFlags.Ephemeral,

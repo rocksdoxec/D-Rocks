@@ -34,7 +34,7 @@ export default {
             return;
         }
 
-        const rawTarget = interaction.options.getString("target");
+        const rawTarget = interaction.options.getString("user");
         const targetId = rawTarget.replace(/[<@!>]/g, '').trim();
 
         if (!/^\d{17,20}$/.test(targetId)) {

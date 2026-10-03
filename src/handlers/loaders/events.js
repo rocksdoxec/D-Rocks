@@ -23,13 +23,14 @@ export default async function loadEvents(client) {
                 continue;
             }
 
-            const safeExecute = async (...args) => {
-                try {
-                    await event.execute(...args, client);
-                } catch (error) {
-                    logger.error(`Error executing event ${event.name}:`, error);
-                }
-            };
+const safeExecute = async (...args) => {
+    try {
+        console.log(`🔥 EVENT FIRED: ${event.name}`);
+        await event.execute(...args, client);
+    } catch (error) {
+        logger.error(`Error executing event ${event.name}:`, error);
+    }
+};
 
             if (event.once) {
                 client.once(event.name, safeExecute);

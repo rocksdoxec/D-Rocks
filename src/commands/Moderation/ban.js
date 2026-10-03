@@ -10,7 +10,7 @@ export default {
         .setDescription("حظر عضو من السيرفر") 
         .addUserOption((option) => 
             option 
-                .setName("target") 
+                .setName("user") 
                 .setDescription("العضو الذي تريد حظره") 
                 .setRequired(true), 
         ) 

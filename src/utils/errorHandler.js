@@ -749,18 +749,22 @@ export async function handleInteractionError(
     );
 
     // رسائل الـ Cooldown فقط يتم حذفها بعد 5 ثواني
-    await sendErrorResponse(
-        interaction,
-        embed,
-        {
-            ...context,
-            traceId,
-            deleteAfterMs:
-                errorType === ErrorTypes.RATE_LIMIT
-                    ? 5000
-                    : undefined
-        }
-    );
+await sendErrorResponse(
+    interaction,
+    embed,
+    {
+        ...context,
+        traceId,
+        plainMessage:
+            errorType === ErrorTypes.RATE_LIMIT
+                ? description
+                : undefined,
+        deleteAfterMs:
+            errorType === ErrorTypes.RATE_LIMIT
+                ? 5000
+                : undefined
+    }
+);
 }
 
 /**

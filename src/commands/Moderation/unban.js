@@ -11,7 +11,7 @@ export default {
         .setDescription("إلغاء حظر عضو من السيرفر")
         .addStringOption(option =>
             option
-                .setName("target")
+                .setName("user")
                 .setDescription("معرّف العضو أو منشن العضو الذي تريد إلغاء حظره")
                 .setRequired(true),
         )

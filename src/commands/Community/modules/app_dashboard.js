@@ -44,16 +44,16 @@ async function buildDashboardEmbed(settings, roles, guild, client) {
     const managerRoleList =
         settings.managerRoles?.length > 0
             ? settings.managerRoles.map(id => `<@&${id}>`).join(',')
-            : '`None configured`';
+            : '`لا توجد رتب محددة`';
     const roleList =
         roles.length > 0
             ? roles.map(r => `<@&${r.roleId}> — ${r.name}`).join('\n')
-            : '`No application roles configured`';
+            : '`لا توجد رتب تقديم محددة`';
     const questionCount = settings.questions?.length ?? 0;
     const firstQ =
         settings.questions?.[0]
             ? `\`${settings.questions[0].length > 55 ? settings.questions[0].substring(0, 55) + '…' : settings.questions[0]}\``
-            : '`Not set`';
+            : '`غير محدد`';
 
     return new EmbedBuilder()
         .setTitle('لوحة تحكم طلبات التقديم')
@@ -61,14 +61,14 @@ async function buildDashboardEmbed(settings, roles, guild, client) {
         .setColor(getColor('info'))
         .addFields(
             { name: 'حالة الطلب', value: settings.enabled ? 'مفعّل' : 'معطّل', inline: true },
-            { name: 'Log Channel', value: logChannel, inline: true },
+            { name: 'قناة السجلات', value: logChannel, inline: true },
             { name: '\u200B', value: '\u200B', inline: true },
-            { name: 'Manager Roles', value: managerRoleList, inline: false },
-            { name: 'Questions', value: `${questionCount} configured — first: ${firstQ}`, inline: false },
-            { name: 'Application Roles', value: roleList, inline: false },
+            { name: 'رتب الإدارة', value: managerRoleList, inline: false },
+            { name: 'الأسئلة', value: `${questionCount} مهيأة — السؤال الأول: ${firstQ}`, inline: false },
+            { name: 'رتب التقديم', value: roleList, inline: false },
             {
                 name: 'مدة الاحتفاظ',
-                value: ``قيد الانتظار: **${settings.pendingApplicationRetentionDays ?? 30} يوم** · تمت المراجعة: **${settings.reviewedApplicationRetentionDays ?? 14} يوم**`,
+                value: `قيد الانتظار: **${settings.pendingApplicationRetentionDays ?? 30} يوم** · تمت المراجعة: **${settings.reviewedApplicationRetentionDays ?? 14} يوم**`,
                 inline: false,
             },
         )
@@ -119,7 +119,7 @@ function buildButtonRow(settings, guildId, disabled = false) {
     return new ActionRowBuilder().addComponents(
         new ButtonBuilder()
             .setCustomId(`app_cfg_toggle_${guildId}`)
-            .setLabel('Applications')
+            .setLabel(systemOn ? 'تعطيل التقديم' : 'تفعيل التقديم')
             .setStyle(systemOn ? ButtonStyle.Success : ButtonStyle.Danger)
             .setDisabled(disabled),
     );
@@ -162,7 +162,7 @@ export default {
                 throw new TitanBotError(
                     'Applications system not set up',
                     ErrorTypes.CONFIGURATION,
-                    'The applications system has not been configured yet. Please run `/app-admin setup` to create your first application.',
+                    'لم يتم إعداد نظام طلبات التقديم بعد. يرجى تشغيل `/app-admin setup` لإنشاء أول طلب تقديم.',
                 );
             }
 
@@ -243,7 +243,7 @@ async function showApplicationSelector(interaction, roles, settings, guildId, cl
         if (reason === 'time' && collected.size === 0) {
             replyUserError(interaction, {
                 type: ErrorTypes.RATE_LIMIT,
-                message: 'No selection was made. The dashboard has closed.',
+                message: 'لم يتم اختيار أي إعداد. تم إغلاق لوحة التحكم.',
             }).catch(() => {});
         }
     });
@@ -274,15 +274,15 @@ async function showApplicationDashboard(rootInteraction, selectedRole, settings,
 
     const logChannelDisplay = appLogChannelId 
         ? `<#${appLogChannelId}>` 
-        : '`Inherits global log channel`';
+        : '`يستخدم قناة السجلات العامة`';
     
     const questionsDisplay = questions.length > 0
         ? questions.map((q, i) => `${i + 1}. \`${q.length > 60 ? q.substring(0, 60) + '…' : q}\``).join('\n')
-        : '`Inherits global questions`';
+        : '`يستخدم الأسئلة العامة`';
     
     const managerRolesDisplay = settings.managerRoles && settings.managerRoles.length > 0
         ? settings.managerRoles.map(id => `<@&${id}>`).join(',')
-        : '`None configured`';
+        : '`لا توجد رتب محددة`';
 
     const embed = new EmbedBuilder()
         .setTitle('📋 لوحة تحكم طلب التقديم')
@@ -296,22 +296,22 @@ async function showApplicationDashboard(rootInteraction, selectedRole, settings,
             },
             { 
                 name: 'حالة الطلب',
-                value: isEnabled ? '✅ **Enabled**' : '❌ **Disabled**', 
+                value: isEnabled ? '✅ **مفعّل**' : '❌ **معطّل**', 
                 inline: true 
             },
             { name: '\u200B', value: '\u200B', inline: true },
             { 
-                name: 'الأسئلة'
+                name: 'الأسئلة',
                 value: questionsDisplay,
                 inline: false 
             },
-            { 
-                name: 'قناة السجلات'
+           { 
+                name: 'قناة السجلات',
                 value: logChannelDisplay,
                 inline: true 
-            },
+             },
             { 
-                name: 'رتب الإدارة'
+                name: 'رتب الإدارة',
                 value: managerRolesDisplay,
                 inline: true 
             },
@@ -414,8 +414,8 @@ function setupCollectors(interaction, settings, roles, guildId, client, selected
     collector.on('end', async (collected, reason) => {
         if (reason === 'time') {
             const timeoutEmbed = new EmbedBuilder()
-                .setTitle('\u23f0 Dashboard Timed Out')
-                .setDescription('This dashboard has been closed due to inactivity. Please run the command again to continue.')
+                .setTitle('⏰ انتهت مهلة لوحة التحكم')
+                .setDescription('تم إغلاق لوحة التحكم بسبب عدم النشاط. يرجى تشغيل الأمر مرة أخرى للمتابعة.')
                 .setColor(getColor('error'));
                 
             await InteractionHelper.safeEditReply(interaction, {
@@ -450,11 +450,11 @@ function setupCollectors(interaction, settings, roles, guildId, client, selected
 
                 await toggleInteraction.followUp({
                     embeds: [successEmbed(
-                        wasEnabled ? '🔴 Applications Disabled' : '🟢 Applications Enabled',
-                        `The applications system is now **${wasEnabled ? 'disabled' : 'enabled'}**.\n\n${
+                        wasEnabled ? '🔴 تم تعطيل التقديم' : '🟢 تم تفعيل التقديم',
+                        `نظام طلبات التقديم الآن **${wasEnabled ? 'معطّل' : 'مفعّل'}**.`.\n\n${
                             wasEnabled 
-                                ? 'Members will no longer be able to apply for roles.' 
-                                : 'Members can now start applying for roles.'
+                                ? 'لن يتمكن الأعضاء من التقديم على الرتب.' 
+                                : 'يمكن للأعضاء الآن التقديم على الرتب.'
                         }`,
                     )],
                     flags: MessageFlags.Ephemeral,
@@ -464,7 +464,7 @@ function setupCollectors(interaction, settings, roles, guildId, client, selected
                 logger.error('Error toggling global application status:', error);
                 await replyUserError(toggleInteraction, {
                     type: ErrorTypes.UNKNOWN,
-                    message: 'An error occurred while toggling the application status.',
+                    message: 'حدث خطأ أثناء تغيير حالة نظام طلبات التقديم.',
                 });
             }
         });
@@ -500,17 +500,17 @@ function setupCollectors(interaction, settings, roles, guildId, client, selected
 
             const confirmModal = new ModalBuilder()
                 .setCustomId('app_delete_confirm')
-                .setTitle('Confirm Application Deletion');
+                .setTitle('تأكيد حذف طلب التقديم');
 
             const deleteWarningText = new TextDisplayBuilder()
-                .setContent(`⚠️ You are about to permanently delete **${appNameForDelete}**. All stored applications and settings for this role will be removed and cannot be recovered.`);
+                .setContent(`⚠️ أنت على وشك حذف **${appNameForDelete}** نهائيًا. سيتم حذف جميع الطلبات والإعدادات المحفوظة لهذه الرتبة ولا يمكن استعادتها.`);
 
             const deleteCheckbox = new CheckboxBuilder()
                 .setCustomId('confirm_delete')
                 .setDefault(false);
 
             const deleteCheckboxLabel = new LabelBuilder()
-                .setLabel('I confirm — this cannot be undone')
+                .setLabel('أؤكد أنني أريد الحذف — لا يمكن التراجع عن ذلك')
                 .setCheckboxComponent(deleteCheckbox);
 
             confirmModal
@@ -523,7 +523,7 @@ function setupCollectors(interaction, settings, roles, guildId, client, selected
                 logger.error('Error showing delete confirmation modal:', error);
                 await replyUserError(btnInteraction, {
                     type: ErrorTypes.UNKNOWN,
-                    message: 'Failed to show confirmation modal. Please try again.',
+                    message: 'تعذر عرض نافذة التأكيد. يرجى المحاولة مرة أخرى.',
                 }).catch(() => {});
                 return;
             }
@@ -538,14 +538,14 @@ function setupCollectors(interaction, settings, roles, guildId, client, selected
                 if (!confirmSubmit) {
                     await replyUserError(btnInteraction, {
                         type: ErrorTypes.VALIDATION,
-                        message: 'Application deletion was cancelled.',
+                        message: 'تم إلغاء حذف طلب التقديم.',
                     });
                     return;
                 }
 
                 const confirmed = confirmSubmit.fields.getCheckbox('confirm_delete');
                 if (!confirmed) {
-                    await replyUserError(confirmSubmit, { type: ErrorTypes.VALIDATION, message: 'You must tick the confirmation checkbox to delete the application.' });
+                    await replyUserError(confirmSubmit, { type: ErrorTypes.VALIDATION, message: 'يجب تحديد مربع التأكيد لحذف طلب التقديم.' });
                     return;
                 }
 
@@ -557,7 +557,7 @@ function setupCollectors(interaction, settings, roles, guildId, client, selected
                 logger.error('Error confirming application deletion:', error);
                 await replyUserError(btnInteraction, {
                     type: ErrorTypes.UNKNOWN,
-                    message: 'An error occurred while deleting the application.',
+                    message: 'حدث خطأ أثناء حذف طلب التقديم.',
                 });
             }
         });
@@ -610,11 +610,11 @@ function setupCollectors(interaction, settings, roles, guildId, client, selected
 
                 await toggleInteraction.followUp({
                     embeds: [successEmbed(
-                        wasEnabled ? '🔴 Application Disabled' : '🟢 Application Enabled',
-                        `The **${updatedRole.name}** application is now **${wasEnabled ? 'disabled' : 'enabled'}**.\n\n${
+                        wasEnabled ? '🔴 تم تعطيل طلب التقديم' : '🟢 تم تفعيل طلب التقديم'
+                        `طلب التقديم الخاص بـ **${updatedRole.name}** أصبح الآن **${wasEnabled ? 'معطّلًا' : 'مفعّلًا'}**.`.\n\n${
                             wasEnabled 
-                                ? 'This application will no longer appear in `/apply submit` options.' 
-                                : 'This application will now appear in `/apply submit` options.'
+                                ? 'لن يظهر طلب التقديم هذا بعد الآن ضمن خيارات `/apply submit`.' 
+                                : 'سيظهر طلب التقديم هذا الآن ضمن خيارات `/apply submit`.'
                         }`,
                     )],
                     flags: MessageFlags.Ephemeral,
@@ -892,8 +892,8 @@ async function handleQuestions(selectInteraction, rootInteraction, settings, rol
     await submitted.reply({
         embeds: [
             successEmbed(
-                '✅ تم تحديث الأسئلة'
-                `${newQuestions.length} question${newQuestions.length !== 1 ? 's' : ''} saved.`,
+               '✅ تم تحديث الأسئلة',
+               `تم حفظ **${newQuestions.length}** ${newQuestions.length === 1 ? 'سؤال' : 'أسئلة'}.`,
             ),
         ],
         flags: MessageFlags.Ephemeral,
@@ -905,7 +905,7 @@ async function handleQuestions(selectInteraction, rootInteraction, settings, rol
 async function handleRoleAdd(selectInteraction, rootInteraction, settings, roles, guildId, client) {
     const modal = new ModalBuilder()
         .setCustomId(`app_cfg_role_add_modal_${guildId}`)
-        .setTitle(''إضافة رتبة للتقديم');
+        .setTitle('إضافة رتبة للتقديم');
 
     const roleSelect = new RoleSelectMenuBuilder()
         .setCustomId('application_role')
@@ -1037,9 +1037,10 @@ async function handleRetention(selectInteraction, rootInteraction, settings, rol
 
     const retentionInfo = new TextDisplayBuilder()
         .setContent(
-            '**قيد الانتظار** — المدة التي يتم خلالها الاحتفاظ بالطلبات التي لم تتم الإجابة عليها أو التي لا تزال قيد المعالجة قبل حذفها تلقائيًا.\n'
-            '**تمت المراجعة** — المدة التي يتم خلالها الاحتفاظ بالطلبات التي تمت الموافقة عليها أو رفضها.\n'
-           '-# أدخل رقمًا صحيحًا بين 1 و3650 (بحد أقصى 10 سنوات).'
+            '**قيد الانتظار** — المدة التي يتم خلالها الاحتفاظ بالطلبات التي لم تتم الإجابة عليها أو التي لا تزال قيد المعالجة قبل حذفها تلقائيًا.\n' +
+            '**تمت المراجعة** — المدة التي يتم خلالها الاحتفاظ بالطلبات التي تمت الموافقة عليها أو رفضها.\n' +
+            '-# أدخل رقمًا صحيحًا بين 1 و3650 (بحد أقصى 10 سنوات).'
+        );
         );
 
     const pendingLabel = new LabelBuilder()
@@ -1086,13 +1087,21 @@ async function handleRetention(selectInteraction, rootInteraction, settings, rol
     const reviewedDays = parseInt(submitted.fields.getTextInputValue('reviewed_days').trim(), 10);
 
     if (isNaN(pendingDays) || pendingDays < 1 || pendingDays > 3650) {
-        await replyUserError(submitted, { type: ErrorTypes.VALIDATION, message: 'مدة الاحتفاظ بالطلبات التي تمت مراجعتها (بالأيام)' });
-        return;
+    await replyUserError(submitted, {
+        type: ErrorTypes.VALIDATION,
+        message: 'يجب أن تكون مدة الاحتفاظ بالطلبات قيد الانتظار رقمًا صحيحًا بين **1** و**3650** يومًا.',
+    });
+    return;
+}
     }
 
     if (isNaN(reviewedDays) || reviewedDays < 1 || reviewedDays > 3650) {
-        await replyUserError(submitted, { type: ErrorTypes.VALIDATION, message: 'يجب أن تكون مدة الاحتفاظ بالطلبات قيد الانتظار رقمًا صحيحًا بين **1** و**3650** يومًا.' });
-        return;
+    await replyUserError(submitted, {
+        type: ErrorTypes.VALIDATION,
+        message: 'يجب أن تكون مدة الاحتفاظ بالطلبات التي تمت مراجعتها رقمًا صحيحًا بين **1** و**3650** يومًا.',
+    });
+    return;
+}
     }
 
     settings.pendingApplicationRetentionDays = pendingDays;
@@ -1102,9 +1111,9 @@ async function handleRetention(selectInteraction, rootInteraction, settings, rol
     await submitted.reply({
         embeds: [
             successEmbed(
-                '✅ تم تحديث مدة الاحتفاظ'
-                `سيتم الاحتفاظ بالطلبات قيد الانتظار لمدة **${pendingDays} يومًا**.\nسيتم الاحتفاظ بالطلبات التي تمت مراجعتها لمدة **${reviewedDays} يومًا**.`
-            ),
+                 '✅ تم تحديث مدة الاحتفاظ',
+                 `سيتم الاحتفاظ بالطلبات قيد الانتظار لمدة **${pendingDays} يومًا**.\nسيتم الاحتفاظ بالطلبات التي تمت مراجعتها لمدة **${reviewedDays} يومًا**.`,
+             ),
         ],
         flags: MessageFlags.Ephemeral,
     });
@@ -1139,7 +1148,6 @@ async function handleDeleteApplication(confirmSubmit, selectedRoleId, guildId, r
         await confirmSubmit.reply({
             embeds: [
                 successEmbed(
-                    successEmbed(
                     '🗑️ تم حذف طلب التقديم',
                     `تم حذف طلب التقديم الخاص بـ <@&${selectedRoleId}> (**${deletedRole.name}**) نهائيًا.\n\n` +
                     `تم الحذف: **${applicationsToDelete.length}** طلب تقديم${applicationsToDelete.length !== 1 ? 's' : ''}`

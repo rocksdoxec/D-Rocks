@@ -6,7 +6,7 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("ping")
-        .setDescription("Checks the bot's latency and API speed"),
+        .setDescription("فحص سرعة استجابة البوت وسرعة واجهة API"),
 
     async prefixExecute(interaction) {
         try {

@@ -26,7 +26,7 @@ export default {
             option
                 .setName("duration")
                 .setDescription(
-                    "مدة السحب، مثل: 1h أو 30m أو 5d.",
+                    "مدة السحب، مثل: (e.g., 1h, 30m, 5d).",
                 )
                 .setRequired(true),
         )

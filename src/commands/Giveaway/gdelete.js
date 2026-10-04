@@ -10,12 +10,12 @@ export default {
     data: new SlashCommandBuilder()
         .setName("gdelete")
         .setDescription(
-            "Deletes a giveaway message and removes it from the database.",
+            "حذف رسالة السحب وإزالتها من قاعدة البيانات.",
         )
         .addStringOption((option) =>
             option
                 .setName("messageid")
-                .setDescription("The message ID of the giveaway to delete.")
+                .setDescription("معرّف رسالة السحب التي تريد حذفها.")
                 .setRequired(true),
         )
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
@@ -25,7 +25,7 @@ export default {
             throw new TitanBotError(
                 'Giveaway command used outside guild',
                 ErrorTypes.VALIDATION,
-                'This command can only be used in a server.',
+                'لا يمكن استخدام هذا الأمر إلا داخل السيرفر.',
                 { userId: interaction.user.id }
             );
         }
@@ -34,7 +34,7 @@ export default {
             throw new TitanBotError(
                 'User lacks ManageGuild permission',
                 ErrorTypes.PERMISSION,
-                "You need the 'Manage Server' permission to delete a giveaway.",
+                "تحتاج إلى صلاحية **إدارة السيرفر** لحذف السحب.",
                 { userId: interaction.user.id, guildId: interaction.guildId }
             );
         }
@@ -47,7 +47,7 @@ export default {
             throw new TitanBotError(
                 'Invalid message ID format',
                 ErrorTypes.VALIDATION,
-                'Please provide a valid message ID.',
+                'يرجى إدخال معرّف رسالة صالح.',
                 { providedId: messageId }
             );
         }
@@ -59,13 +59,13 @@ export default {
             throw new TitanBotError(
                 `Giveaway not found: ${messageId}`,
                 ErrorTypes.VALIDATION,
-                "No giveaway was found with that message ID.",
+                "لم يتم العثور على سحب باستخدام معرّف الرسالة هذا.",
                 { messageId, guildId: interaction.guildId }
             );
         }
 
         let deletedMessage = false;
-        let channelName = "Unknown Channel";
+        let channelName = "قناة غير معروفة";
 
         const tryDeleteFromChannel = async (channel) => {
             if (!channel || !channel.isTextBased() || !channel.messages?.fetch) {
@@ -78,7 +78,7 @@ export default {
             }
 
             await message.delete();
-            channelName = channel.name || 'unknown-channel';
+            channelName = channel.name || 'قناة غير معروفة';
             deletedMessage = true;
             return true;
         };
@@ -116,7 +116,7 @@ export default {
             throw new TitanBotError(
                 `Failed to delete giveaway from database: ${messageId}`,
                 ErrorTypes.UNKNOWN,
-                'The giveaway could not be removed from the database. Please try again.',
+                'تعذر إزالة السحب من قاعدة البيانات. يرجى المحاولة مرة أخرى.',
                 { messageId, guildId: interaction.guildId }
             );
         }
@@ -128,24 +128,24 @@ export default {
             throw new TitanBotError(
                 `Giveaway still exists after deletion: ${messageId}`,
                 ErrorTypes.UNKNOWN,
-                'Deletion did not persist in the database. Please try again.',
+                'لم يتم حفظ عملية الحذف في قاعدة البيانات. يرجى المحاولة مرة أخرى.',
                 { messageId, guildId: interaction.guildId }
             );
         }
 
         const statusMsg = deletedMessage
-            ? `and the message was deleted from #${channelName}`
-            : `but the message was already deleted or the channel was inaccessible.`;
+            ? `وتم حذف الرسالة من #${channelName}`
+            : `لكن الرسالة محذوفة بالفعل أو لا يمكن الوصول إلى القناة.`;
 
         const winnerIds = Array.isArray(giveaway.winnerIds) ? giveaway.winnerIds : [];
         const hasWinners = winnerIds.length > 0;
         const wasEnded = giveaway.ended === true || giveaway.isEnded === true || hasWinners;
 
         const winnerStatusMsg = hasWinners
-            ? `This giveaway already had ${winnerIds.length} winner(s) selected.`
+            ? `تم اختيار ${winnerIds.length} فائز(ين) في هذا السحب مسبقًا.`
             : wasEnded
-                ? 'This giveaway was ended with no valid winners.'
-                : 'No winner was picked before deletion.';
+                ? 'انتهى هذا السحب بدون فائزين صالحين.'
+                : 'لم يتم اختيار أي فائز قبل الحذف.';
 
         logger.info(`Giveaway deleted: ${messageId} in ${channelName}`);
 
@@ -179,8 +179,8 @@ export default {
         return InteractionHelper.safeReply(interaction, {
             embeds: [
                 successEmbed(
-                    "Giveaway Deleted",
-                    `Successfully deleted the giveaway for **${giveaway.prize}** ${statusMsg}. ${winnerStatusMsg}`,
+                    "تم حذف السحب",
+                    `تم حذف السحب الخاص بجائزة **${giveaway.prize}** بنجاح ${statusMsg}. ${winnerStatusMsg}`,
                 ),
             ],
             flags: MessageFlags.Ephemeral,

@@ -56,8 +56,8 @@ async function buildDashboardEmbed(settings, roles, guild, client) {
             : '`Not set`';
 
     return new EmbedBuilder()
-        .setTitle('Applications Dashboard')
-        .setDescription(`Manage application settings for **${guild.name}**.\nSelect an option below to modify a setting.`)
+        .setTitle('لوحة تحكم طلبات التقديم')
+        .setDescription(`إدارة إعدادات طلبات التقديم في **${guild.name}**.\nاختر أحد الخيارات بالأسفل لتعديل الإعدادات.`)
         .setColor(getColor('info'))
         .addFields(
             { name: 'Application Status', value: settings.enabled ? 'Enabled' : 'Disabled', inline: true },
@@ -79,36 +79,36 @@ async function buildDashboardEmbed(settings, roles, guild, client) {
 function buildSelectMenu(guildId) {
     return new StringSelectMenuBuilder()
         .setCustomId(`app_cfg_${guildId}`)
-        .setPlaceholder('Select a setting to configure...')
+        .setPlaceholder('اختر إعدادًا لتعديله...')
         .addOptions(
             new StringSelectMenuOptionBuilder()
-                .setLabel('Log Channel')
-                .setDescription('Set the channel where new applications are logged')
+                .setLabel('قناة السجلات')
+                .setDescription('تحديد القناة التي يتم فيها تسجيل طلبات التقديم الجديدة')
                 .setValue('log_channel')
                 .setEmoji('📢'),
             new StringSelectMenuOptionBuilder()
-                .setLabel('Manager Roles')
-                .setDescription('Add or remove a role that can manage applications')
+                .setLabel('رتب الإدارة')
+                .setDescription('إضافة أو إزالة رتبة يمكنها إدارة طلبات التقديم')
                 .setValue('manager_role')
                 .setEmoji('🛡️'),
             new StringSelectMenuOptionBuilder()
-                .setLabel('Edit Questions')
-                .setDescription('Customise the questions shown on the application form')
+                .setLabel('تعديل الأسئلة')
+                .setDescription('تعديل الأسئلة التي تظهر في نموذج التقديم')
                 .setValue('questions')
                 .setEmoji('📝'),
             new StringSelectMenuOptionBuilder()
-                .setLabel('Add Application Role')
-                .setDescription('Add a role that members can apply for')
+                .setLabel('إضافة رتبة للتقديم')
+                .setDescription('إضافة رتبة يمكن للأعضاء التقديم عليها')
                 .setValue('role_add')
                 .setEmoji('➕'),
             new StringSelectMenuOptionBuilder()
-                .setLabel('Remove Application Role')
-                .setDescription('Remove a role from the applications list')
+                .setLabel('إزالة رتبة للتقديم')
+                .setDescription('إزالة رتبة من قائمة طلبات التقديم')
                 .setValue('role_remove')
                 .setEmoji('➖'),
             new StringSelectMenuOptionBuilder()
-                .setLabel('Retention Period')
-                .setDescription('Set how long pending and reviewed applications are kept')
+                .setLabel('مدة الاحتفاظ')
+                .setDescription('تحديد مدة الاحتفاظ بالطلبات قيد المراجعة والطلبات التي تمت مراجعتها')
                 .setValue('retention')
                 .setEmoji('🗑️'),
         );
@@ -285,38 +285,38 @@ async function showApplicationDashboard(rootInteraction, selectedRole, settings,
         : '`None configured`';
 
     const embed = new EmbedBuilder()
-        .setTitle('📋 Application Dashboard')
-        .setDescription(`Configuration for **${selectedRole.name}**`)
+        .setTitle('📋 لوحة تحكم طلب التقديم')
+        .setDescription(`إعدادات **${selectedRole.name}**`)
         .setColor(isEnabled ? getColor('success') : getColor('error'))
         .addFields(
             { 
-                name: 'Role', 
+                name: 'الرتبة'
                 value: roleObj ? roleObj.toString() : `<@&${selectedRole.roleId}>`, 
                 inline: true 
             },
             { 
-                name: 'Application Status', 
+                name: 'حالة الطلب' 
                 value: isEnabled ? '✅ **Enabled**' : '❌ **Disabled**', 
                 inline: true 
             },
             { name: '\u200B', value: '\u200B', inline: true },
             { 
-                name: 'Questions', 
+                name: 'الأسئلة'
                 value: questionsDisplay,
                 inline: false 
             },
             { 
-                name: 'Log Channel', 
+                name: 'قناة السجلات'
                 value: logChannelDisplay,
                 inline: true 
             },
             { 
-                name: 'Manager Roles',
+                name: 'رتب الإدارة'
                 value: managerRolesDisplay,
                 inline: true 
             },
             { 
-                name: 'Retention Period',
+                name: 'مدة الاحتفاظ'
                 value: `Pending: **${settings.pendingApplicationRetentionDays ?? 30}d** · Reviewed: **${settings.reviewedApplicationRetentionDays ?? 14}d**`,
                 inline: false 
             },
@@ -329,11 +329,11 @@ async function showApplicationDashboard(rootInteraction, selectedRole, settings,
     const controlButtons = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
             .setCustomId(`app_toggle_${selectedRole.roleId}`)
-            .setLabel(isEnabled ? 'Disable Application' : 'Enable Application')
+            ..setLabel(isEnabled ? 'تعطيل الطلب' : 'تفعيل الطلب')
             .setStyle(isEnabled ? ButtonStyle.Danger : ButtonStyle.Success),
         new ButtonBuilder()
             .setCustomId(`app_delete_${selectedRole.roleId}`)
-            .setLabel('Delete Application')
+            ..setLabel('حذف الطلب')
             .setStyle(ButtonStyle.Danger)
             .setEmoji('🗑️'),
     );
@@ -594,7 +594,7 @@ function setupCollectors(interaction, settings, roles, guildId, client, selected
                 if (roleIndex === -1) {
                     await replyUserError(toggleInteraction, {
                         type: ErrorTypes.USER_INPUT,
-                        message: 'Application role not found.',
+                        message: 'لم يتم العثور على رتبة التقديم.'
                     });
                     return;
                 }
@@ -624,7 +624,7 @@ function setupCollectors(interaction, settings, roles, guildId, client, selected
                 logger.error('Error toggling application status:', error);
                 await replyUserError(toggleInteraction, {
                     type: ErrorTypes.UNKNOWN,
-                    message: 'An error occurred while toggling the application status.',
+                    message: 'انتهت مهلة الإعداد'
                 });
             }
         });
@@ -633,7 +633,7 @@ function setupCollectors(interaction, settings, roles, guildId, client, selected
             if (reason === 'time') {
                 const timeoutEmbed = new EmbedBuilder()
                     .setTitle('Configuration Timeout')
-                    .setDescription('This dashboard session has timed out due to inactivity (10 minutes).\n\nTo continue configuring your applications, please run the command again.')
+                    .setDescription('انتهت جلسة لوحة التحكم بسبب عدم النشاط لمدة 10 دقائق.'.\n\nTo continue configuring your applications, please run the command again.')
                     .setColor(getColor('warning'));
                     
                 await InteractionHelper.safeEditReply(interaction, {
@@ -648,16 +648,16 @@ function setupCollectors(interaction, settings, roles, guildId, client, selected
 function buildApplicationSelectMenu(guildId, roleId) {
     return new StringSelectMenuBuilder()
         .setCustomId(`app_cfg_${roleId}`)
-        .setPlaceholder('Select a setting to configure...')
+        .setPlaceholder('اختر إعدادًا لتعديله...')
         .addOptions(
             new StringSelectMenuOptionBuilder()
-                .setLabel('Log Channel')
+                .setLabel('قناة السجلات')
                 .setDescription('Set the channel where applications are logged')
                 .setValue('log_channel')
                 .setEmoji('📢'),
             new StringSelectMenuOptionBuilder()
-                .setLabel('Manager Roles')
-                .setDescription('Add or remove a role that can manage applications')
+                .setLabel('رتب الإدارة')
+                .setDescription('إضافة أو إزالة رتبة يمكنها إدارة طلبات التقديم')
                 .setValue('manager_role')
                 .setEmoji('🛡️'),
             new StringSelectMenuOptionBuilder()
@@ -693,8 +693,8 @@ async function handleLogChannel(selectInteraction, rootInteraction, settings, ro
         .setRequired(true);
 
     const channelLabel = new LabelBuilder()
-        .setLabel('Log Channel')
-        .setDescription('Channel where new applications will be logged')
+        .setLabel('قناة السجلات')
+        .setDescription('تحديد القناة التي يتم فيها تسجيل طلبات التقديم الجديدة')
         .setChannelSelectMenuComponent(channelSelect);
 
     modal.addLabelComponents(channelLabel);
@@ -749,7 +749,7 @@ async function handleManagerRole(selectInteraction, rootInteraction, settings, r
         .setRequired(true);
 
     const roleLabel = new LabelBuilder()
-        .setLabel('Manager Roles')
+        .setLabel('رتب الإدارة')
         .setDescription('Selected roles will be toggled on/off as manager roles')
         .setRoleSelectMenuComponent(roleSelect);
 

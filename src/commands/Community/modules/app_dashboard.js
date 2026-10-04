@@ -316,9 +316,9 @@ async function showApplicationDashboard(rootInteraction, selectedRole, settings,
                 inline: true 
             },
             { 
-                name: 'مدة الاحتفاظ'
-                value: `Pending: **${settings.pendingApplicationRetentionDays ?? 30}d** · Reviewed: **${settings.reviewedApplicationRetentionDays ?? 14}d**`,
-                inline: false 
+                name: 'مدة الاحتفاظ',
+                value: `قيد الانتظار: **${settings.pendingApplicationRetentionDays ?? 30} يوم** · تمت المراجعة: **${settings.reviewedApplicationRetentionDays ?? 14} يوم**`,
+                nline: false 
             },
         )
         .setFooter({ text: 'تغلق لوحة التحكم بعد 15 دقيقة من عدم النشاط' })
@@ -451,7 +451,7 @@ function setupCollectors(interaction, settings, roles, guildId, client, selected
                 await toggleInteraction.followUp({
                     embeds: [successEmbed(
                         wasEnabled ? '🔴 تم تعطيل التقديم' : '🟢 تم تفعيل التقديم',
-                        `نظام طلبات التقديم الآن **${wasEnabled ? 'معطّل' : 'مفعّل'}**.`.\n\n${
+                        `نظام طلبات التقديم الآن **${wasEnabled ? 'معطّل' : 'مفعّل'}**.\n\n${
                             wasEnabled 
                                 ? 'لن يتمكن الأعضاء من التقديم على الرتب.' 
                                 : 'يمكن للأعضاء الآن التقديم على الرتب.'
@@ -610,8 +610,8 @@ function setupCollectors(interaction, settings, roles, guildId, client, selected
 
                 await toggleInteraction.followUp({
                     embeds: [successEmbed(
-                        wasEnabled ? '🔴 تم تعطيل طلب التقديم' : '🟢 تم تفعيل طلب التقديم'
-                        `طلب التقديم الخاص بـ **${updatedRole.name}** أصبح الآن **${wasEnabled ? 'معطّلًا' : 'مفعّلًا'}**.`.\n\n${
+                        wasEnabled ? '🔴 تم تعطيل طلب التقديم' : '🟢 تم تفعيل طلب التقديم',
+                        `طلب التقديم الخاص بـ **${updatedRole.name}** أصبح الآن **${wasEnabled ? 'معطّلًا' : 'مفعّلًا'}**.\n\n${
                             wasEnabled 
                                 ? 'لن يظهر طلب التقديم هذا بعد الآن ضمن خيارات `/apply submit`.' 
                                 : 'سيظهر طلب التقديم هذا الآن ضمن خيارات `/apply submit`.'
@@ -1093,7 +1093,6 @@ async function handleRetention(selectInteraction, rootInteraction, settings, rol
     });
     return;
 }
-    }
 
     if (isNaN(reviewedDays) || reviewedDays < 1 || reviewedDays > 3650) {
     await replyUserError(submitted, {
@@ -1102,7 +1101,6 @@ async function handleRetention(selectInteraction, rootInteraction, settings, rol
     });
     return;
 }
-    }
 
     settings.pendingApplicationRetentionDays = pendingDays;
     settings.reviewedApplicationRetentionDays = reviewedDays;

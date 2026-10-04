@@ -17,8 +17,8 @@ export default {
             const apiLatency = Math.max(0, Math.round(interaction.client.ws.ping));
 
             const embed = createEmbed({ title: 'Pong!', description: null }).addFields(
-            { name: "زمن استجابة البوت", value: `${latency}ms`, inline: true },
-            { name: "زمن استجابة الـ API", value: `${apiLatency}ms`, inline: true },
+                { name: 'زمن استجابة البوت'value: `${latency}ms`, inline: true },
+                { name: 'زمن استجابة الـ API', value: `${apiLatency}ms`, inline: true },
             );
 
             await pingingMessage.edit({ content: null, embeds: [embed] });

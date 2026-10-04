@@ -60,8 +60,8 @@ export async function createInitialHelpMenu(client) {
 
     const options = [
         {
-            label: "📋 All Commands",
-            description: "Browse every available command in a single list",
+            label: "📋 جميع الأوامر",
+            description: "استعراض جميع الأوامر المتاحة في قائمة واحدة",
             value: ALL_COMMANDS_ID,
         },
         ...categoryDirs.map((category) => {
@@ -69,7 +69,7 @@ export async function createInitialHelpMenu(client) {
             const icon = CATEGORY_ICONS[categoryName] || "🔍";
             return {
                 label: `${icon} ${categoryName}`,
-                description: `View commands in the ${categoryName} category`,
+                description: `عرض الأوامر الموجودة في تصنيف ${categoryName}`,
                 value: category,
             };
         }),
@@ -77,54 +77,55 @@ export async function createInitialHelpMenu(client) {
 
     const botName = client?.user?.username || "Bot";
     const embed = createEmbed({
-        title: `📖 ${botName} Help`,
-        description: 'Set up your server, pick what to enable, then browse commands below.',
+        title: `📖 مساعدة ${botName}`,
+        description: 'قم بإعداد السيرفر، واختر ما تريد تفعيله، ثم استعرض الأوامر بالأسفل.',
         color: 'primary',
         thumbnail: client.user?.displayAvatarURL?.({ size: 1024 }),
         fields: [
             {
-                name: '🚀 Getting Started',
+                name: '🚀 البدء',
                 value: [
-                    '**1. Launch setup** — Run `/configwizard` to configure prefix, mod role, and logs.',
-                    '**2. Enable systems** — Use `/commands dashboard` to turn categories on or off.',                    '**3. Browse commands** — Use the menu below to view categories and commands.',
+                    '**1. بدء الإعداد** — استخدم `/configwizard` لتكوين البادئة ورتبة المشرفين واللوقات.',
+                    '**2. تفعيل الأنظمة** — استخدم `/commands dashboard` لتفعيل أو تعطيل التصنيفات.',
+                    '**3. استعراض الأوامر** — استخدم القائمة بالأسفل لعرض التصنيفات والأوامر.',
                 ].join('\n'),
                 inline: false,
             },
             {
-                name: 'ℹ️ How It Works',
+                name: 'ℹ️ كيف يعمل',
                 value: [
-                    '• Dashboard commands manage each feature visually',
-                    '• Settings are saved per server',
-                    '• Slash commands and prefixes both work once enabled',
+                    '• أوامر لوحة التحكم تدير كل ميزة بشكل مرئي',
+                    '• يتم حفظ الإعدادات لكل سيرفر بشكل منفصل',
+                    '• تعمل أوامر السلاش والبريفكس بعد تفعيلها',
                 ].join('\n'),
                 inline: false,
             },
             {
                 name: '\u200B',
-                value: `-# ${botName} is [open source](https://youtu.be/1jCZX8s3bJE?si=NPOYx-vxVE1I5vJK)`,
+                value: `-# ${botName} هو [مفتوح المصدر](https://youtu.be/1jCZX8s3bJE?si=NPOYx-vxVE1I5vJK)`,
                 inline: false,
             },
         ],
     });
 
     embed.setFooter({ 
-        text: "Made with ❤️" 
+        text: "صُنع بـ ❤️" 
     });
     embed.setTimestamp();
 
     const bugReportButton = new ButtonBuilder()
         .setCustomId(BUG_REPORT_BUTTON_ID)
-        .setLabel("Report Bug")
+        .setLabel("الإبلاغ عن خطأ")
         .setStyle(ButtonStyle.Danger);
 
     const supportButton = new ButtonBuilder()
-        .setLabel("Support Server")
+        .setLabel("سيرفر الدعم")
         .setURL("https://discord.gg/QnWNz2dKCE")
         .setStyle(ButtonStyle.Link);
 
     const selectRow = createSelectMenu(
         CATEGORY_SELECT_ID,
-        "Select to view the commands",
+        "اختر لعرض الأوامر",
         options,
     );
 
@@ -143,7 +144,7 @@ export default {
     slashOnly: true,
     data: new SlashCommandBuilder()
         .setName("help")
-        .setDescription("Displays the help menu with all available commands"),
+        .setDescription("عرض قائمة المساعدة مع جميع الأوامر المتاحة"),
 
     async execute(interaction, guildConfig, client) {
         
@@ -164,8 +165,8 @@ export default {
                 }
 
                 const closedEmbed = createEmbed({
-                    title: "Help menu closed",
-                    description: "Help menu has been closed, use /help again.",
+                    title: "تم إغلاق قائمة المساعدة",
+                    description: "تم إغلاق قائمة المساعدة، استخدم /help مرة أخرى.",
                     color: "secondary",
                 });
 

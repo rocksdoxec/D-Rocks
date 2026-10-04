@@ -207,15 +207,22 @@ async function askQuestion(dmChannel, userId, prompt, stepNumber, totalSteps) {
 
     if (!collected || !collected.size) {
         await dmChannel.send({
-            embeds: [buildUserErrorEmbed(ErrorTypes.RATE_LIMIT, 'لم تجب في الوقت المحدد. شغّل معالج الإعداد مرة أخرى عندما تكون جاهزًا.')],
+            embeds: [buildUserErrorEmbed(
+                ErrorTypes.RATE_LIMIT,
+                'لم تجب في الوقت المحدد. شغّل معالج الإعداد مرة أخرى عندما تكون جاهزًا.'
+            )],
         });
         return null;
     }
 
     const answer = collected.first().content.trim();
+
     if (answer.toLowerCase() === 'cancel') {
         await dmChannel.send({
-            embeds: [infoEmbed('تم إلغاء الإعداد', 'تم إيقاف معالج الإعداد. ستبقى إجاباتك المحفوظة مطبّقة.')],
+            embeds: [infoEmbed(
+                'تم إلغاء الإعداد',
+                'تم إيقاف معالج الإعداد. ستبقى إجاباتك المحفوظة مطبّقة.'
+            )],
         });
         return { cancelled: true };
     }
@@ -249,24 +256,32 @@ function formatSavedAck(key, value, guild) {
 
 async function validateGuildChannelId(guild, channelId) {
     const channel = guild.channels.cache.get(channelId) ?? await guild.channels.fetch(channelId).catch(() => null);
+
     if (!channel || !channel.isTextBased()) {
         throw new Error('لم يتم العثور على هذه القناة في السيرفر أو أنها ليست قناة نصية.');
     }
+
     return channel.id;
 }
 
 async function validateGuildRoleId(guild, roleId) {
     const role = guild.roles.cache.get(roleId) ?? await guild.roles.fetch(roleId).catch(() => null);
+
     if (!role) {
         throw new Error('لم يتم العثور على هذه الرتبة في السيرفر.');
     }
+
     return role.id;
 }
 
 async function refreshDashboard(rootInteraction, config, guild) {
     const embed = buildDashboardEmbed(config, guild);
     const components = [buildButtonRow(config, guild.id), buildSettingsSelect(guild.id)];
-    await InteractionHelper.safeEditReply(rootInteraction, { embeds: [embed], components }).catch(() => {});
+
+    await InteractionHelper.safeEditReply(
+        rootInteraction,
+        { embeds: [embed], components }
+    ).catch(() => {});
 }
 
 async function runSetupWizard(buttonInteraction, config, guild, client, rootInteraction) {
@@ -274,9 +289,13 @@ async function runSetupWizard(buttonInteraction, config, guild, client, rootInte
 
     if (activeWizardSessions.has(user.id)) {
         await buttonInteraction.followUp({
-            embeds: [warningEmbed('الإعداد قيد التشغيل بالفعل', 'لديك بالفعل معالج إعداد مفتوح في رسائلك الخاصة. أجب هناك للمتابعة، أو اكتب `cancel` لإيقافه.')],
+            embeds: [warningEmbed(
+                'الإعداد قيد التشغيل بالفعل',
+                'لديك بالفعل معالج إعداد مفتوح في رسائلك الخاصة. أجب هناك للمتابعة، أو اكتب `cancel` لإيقافه.'
+            )],
             flags: MessageFlags.Ephemeral,
         }).catch(() => {});
+
         return;
     }
 
@@ -287,7 +306,11 @@ async function runSetupWizard(buttonInteraction, config, guild, client, rootInte
     try {
         dmChannel = await user.createDM();
     } catch (error) {
-        logger.warn('Failed to create DM channel for setup wizard', { userId: user.id, error: error.message });
+        logger.warn('Failed to create DM channel for setup wizard', {
+            userId: user.id,
+            error: error.message
+        });
+
         await notifyWizardDmBlocked(buttonInteraction);
         return;
     } finally {
@@ -303,10 +326,13 @@ async function runSetupWizard(buttonInteraction, config, guild, client, rootInte
             question: 'ما هي بادئة الأوامر التي تريد أن يستخدمها هذا السيرفر؟\nالحالية: `' + (config.prefix || getCommandPrefix()) + '`\nاكتب `skip` للاحتفاظ بها، أو `cancel` لإيقاف الإعداد.',
             parse: async (answer) => {
                 const normalized = answer.trim();
+
                 if (normalized.toLowerCase() === 'skip') return undefined;
+
                 if (/\s/.test(normalized) || normalized.length < 1 || normalized.length > 10) {
                     throw new Error('يجب أن تكون البادئة من 1 إلى 10 أحرف وبدون مسافات.');
                 }
+
                 return normalized;
             },
         },
@@ -316,10 +342,16 @@ async function runSetupWizard(buttonInteraction, config, guild, client, rootInte
             question: 'ما هي القناة التي يجب أن تستقبل لوقات البوت؟\nأرسل منشن القناة، أو معرّف القناة، أو `none` للحذف، أو `skip` للاحتفاظ بالقيمة الحالية، أو `cancel` لإيقاف الإعداد.',
             parse: async (answer) => {
                 const normalized = answer.trim();
+
                 if (normalized.toLowerCase() === 'skip') return undefined;
                 if (normalized.toLowerCase() === 'none') return null;
+
                 const id = extractId(normalized);
-                if (!id) throw new Error('أرسل منشن قناة صالحًا أو معرّف قناة من هذا السيرفر.');
+
+                if (!id) {
+                    throw new Error('أرسل منشن قناة صالحًا أو معرّف قناة من هذا السيرفر.');
+                }
+
                 return validateGuildChannelId(guild, id);
             },
         },
@@ -329,10 +361,16 @@ async function runSetupWizard(buttonInteraction, config, guild, client, rootInte
             question: 'ما هي الرتبة التي يجب أن يمتلكها المشرفون؟\nأرسل منشن الرتبة، أو معرّف الرتبة، أو `none` للحذف، أو `skip` للاحتفاظ بالقيمة الحالية، أو `cancel` لإيقاف الإعداد.',
             parse: async (answer) => {
                 const normalized = answer.trim();
+
                 if (normalized.toLowerCase() === 'skip') return undefined;
                 if (normalized.toLowerCase() === 'none') return null;
+
                 const id = extractId(normalized);
-                if (!id) throw new Error('أرسل منشن رتبة صالحًا أو معرّف رتبة من هذا السيرفر.');
+
+                if (!id) {
+                    throw new Error('أرسل منشن رتبة صالحًا أو معرّف رتبة من هذا السيرفر.');
+                }
+
                 return validateGuildRoleId(guild, id);
             },
         },
@@ -352,7 +390,11 @@ async function runSetupWizard(buttonInteraction, config, guild, client, rootInte
                 })],
             });
         } catch (error) {
-            logger.warn('Failed to send setup wizard DM', { userId: user.id, error: error.message });
+            logger.warn('Failed to send setup wizard DM', {
+                userId: user.id,
+                error: error.message
+            });
+
             await notifyWizardDmBlocked(buttonInteraction);
             return;
         }
@@ -392,25 +434,43 @@ async function runSetupWizard(buttonInteraction, config, guild, client, rootInte
                             embeds: [infoEmbed('تم التخطي', prompt.skipMessage)],
                         });
                     } else {
-                        await ConfigService.updateSetting(client, guild.id, prompt.key, value, user.id);
+                        await ConfigService.updateSetting(
+                            client,
+                            guild.id,
+                            prompt.key,
+                            value,
+                            user.id
+                        );
+
                         changes[prompt.key] = value;
+
                         await dmChannel.send({
-                            embeds: [successEmbed('تم الحفظ', formatSavedAck(prompt.key, value, guild))],
+                            embeds: [successEmbed(
+                                'تم الحفظ',
+                                formatSavedAck(prompt.key, value, guild)
+                            )],
                         });
 
                         try {
                             const updatedConfig = await getGuildConfig(client, guild.id);
                             await refreshDashboard(rootInteraction, updatedConfig, guild);
                         } catch (refreshError) {
-                            logger.debug('Failed to refresh dashboard during setup wizard', { error: refreshError.message });
+                            logger.debug(
+                                'Failed to refresh dashboard during setup wizard',
+                                { error: refreshError.message }
+                            );
                         }
                     }
 
                     answered = true;
                 } catch (error) {
                     errors.push(`• ${prompt.key}: ${error.message}`);
+
                     await dmChannel.send({
-                        embeds: [buildUserErrorEmbed(ErrorTypes.VALIDATION, `${error.message}\n\nيرجى الرد مرة أخرى بإجابة صحيحة أو `skip` أو `cancel`.`)],
+                        embeds: [buildUserErrorEmbed(
+                            ErrorTypes.VALIDATION,
+                            `${error.message}\n\nيرجى الرد مرة أخرى بإجابة صحيحة أو \`skip\` أو \`cancel\`.`
+                        )],
                     });
                 }
             }
@@ -422,42 +482,74 @@ async function runSetupWizard(buttonInteraction, config, guild, client, rootInte
 
         if (!wizardCancelled) {
             try {
-                await setConfigValue(client, guild.id, 'setupWizardCompleted', true);
+                await setConfigValue(
+                    client,
+                    guild.id,
+                    'setupWizardCompleted',
+                    true
+                );
             } catch (error) {
-                logger.warn('Failed to persist setupWizardCompleted flag', { guildId: guild.id, error: error.message });
+                logger.warn(
+                    'Failed to persist setupWizardCompleted flag',
+                    {
+                        guildId: guild.id,
+                        error: error.message
+                    }
+                );
             }
         }
 
         const summaryTitle = wizardCancelled
-            ? (Object.keys(changes).length > 0 ? 'تم إيقاف الإعداد' : 'تم إلغاء الإعداد')
-            : (errors.length > 0 ? 'اكتمل الإعداد' : 'اكتمل الإعداد');
+            ? (
+                Object.keys(changes).length > 0
+                    ? 'تم إيقاف الإعداد'
+                    : 'تم إلغاء الإعداد'
+            )
+            : 'اكتمل الإعداد';
 
         const summaryBody = wizardCancelled
-            ? (Object.keys(changes).length > 0
-                ? `تم إيقاف الإعداد مبكرًا. تم حفظ **${Object.keys(changes).length}** إعدادات قبل الإيقاف.`
-                : 'تم إيقاف معالج الإعداد قبل حفظ أي تغييرات.')
-            : (Object.keys(changes).length > 0
-                ? `تم تحديث **${Object.keys(changes).length}** إعدادات.${errors.length > 0 ? ' بعض الإجابات احتاجت إلى إعادة المحاولة.' : ''}`
-                : 'لم يتم تطبيق أي تغييرات.');
+            ? (
+                Object.keys(changes).length > 0
+                    ? `تم إيقاف الإعداد مبكرًا. تم حفظ **${Object.keys(changes).length}** إعدادات قبل الإيقاف.`
+                    : 'تم إيقاف معالج الإعداد قبل حفظ أي تغييرات.'
+            )
+            : (
+                Object.keys(changes).length > 0
+                    ? `تم تحديث **${Object.keys(changes).length}** إعدادات.${errors.length > 0 ? ' بعض الإجابات احتاجت إلى إعادة المحاولة.' : ''}`
+                    : 'لم يتم تطبيق أي تغييرات.'
+            );
 
         const summaryEmbed = createEmbed({
-            title: wizardCancelled ? `⚠️ ${summaryTitle}` : `✅ ${summaryTitle}`,
+            title: wizardCancelled
+                ? `⚠️ ${summaryTitle}`
+                : `✅ ${summaryTitle}`,
             description: summaryBody,
-            color: wizardCancelled ? 'warning' : (errors.length > 0 ? 'warning' : 'success'),
+            color: wizardCancelled
+                ? 'warning'
+                : (errors.length > 0 ? 'warning' : 'success'),
         });
 
         if (errors.length > 0) {
             const uniqueErrors = [...new Set(errors)];
-            summaryEmbed.addFields({ name: 'المشاكل', value: uniqueErrors.join('\n').slice(0, 1024) });
+
+            summaryEmbed.addFields({
+                name: 'المشاكل',
+                value: uniqueErrors.join('\n').slice(0, 1024)
+            });
         }
 
-        await dmChannel.send({ embeds: [summaryEmbed] });
+        await dmChannel.send({
+            embeds: [summaryEmbed]
+        });
 
         try {
             const updatedConfig = await getGuildConfig(client, guild.id);
             await refreshDashboard(rootInteraction, updatedConfig, guild);
         } catch (error) {
-            logger.debug('Failed to refresh dashboard after wizard completion', { error: error.message });
+            logger.debug(
+                'Failed to refresh dashboard after wizard completion',
+                { error: error.message }
+            );
         }
     } finally {
         activeWizardSessions.delete(user.id);
@@ -477,7 +569,10 @@ async function showSettingModal(selectInteraction, guildId, setting) {
             .setPlaceholder('اختر قناة نصية...')
             .setMinValues(1)
             .setMaxValues(1)
-            .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
+            .addChannelTypes(
+                ChannelType.GuildText,
+                ChannelType.GuildAnnouncement
+            )
             .setRequired(true);
 
         const channelLabel = new LabelBuilder()
@@ -486,6 +581,7 @@ async function showSettingModal(selectInteraction, guildId, setting) {
             .setChannelSelectMenuComponent(channelSelect);
 
         modal.addLabelComponents(channelLabel);
+
         await selectInteraction.showModal(modal);
         return;
     }
@@ -508,6 +604,7 @@ async function showSettingModal(selectInteraction, guildId, setting) {
             .setRoleSelectMenuComponent(roleSelect);
 
         modal.addLabelComponents(roleLabel);
+
         await selectInteraction.showModal(modal);
         return;
     }
@@ -524,31 +621,40 @@ async function showSettingModal(selectInteraction, guildId, setting) {
         .setMinLength(1)
         .setMaxLength(10);
 
-    modal.addComponents(new ActionRowBuilder().addComponents(textInput));
+    modal.addComponents(
+        new ActionRowBuilder().addComponents(textInput)
+    );
+
     await selectInteraction.showModal(modal);
 }
 
 function resolveSettingModalValue(setting, submitted) {
     if (setting === 'logChannelId') {
         const channelId = submitted.fields.getField('log_channel')?.values?.[0];
+
         if (!channelId) {
             throw new Error('يرجى اختيار قناة اللوقات.');
         }
+
         return channelId;
     }
 
     if (setting === 'modRole') {
         const roleId = submitted.fields.getField('mod_role')?.values?.[0];
+
         if (!roleId) {
             throw new Error('يرجى اختيار رتبة المشرفين.');
         }
+
         return roleId;
     }
 
     const prefix = submitted.fields.getTextInputValue('value')?.trim();
+
     if (!prefix || prefix.length < 1 || prefix.length > 10 || /\s/.test(prefix)) {
         throw new Error('يجب أن تكون البادئة من 1 إلى 10 أحرف وبدون مسافات.');
     }
+
     return prefix;
 }
 
@@ -566,7 +672,13 @@ function buildSettingSuccessMessage(setting, value, guild) {
     return `تم تعيين بادئة السيرفر إلى \`${value}\`.`;
 }
 
-async function handleSettingModalSubmit(selectInteraction, rootInteraction, setting, guildId, client) {
+async function handleSettingModalSubmit(
+    selectInteraction,
+    rootInteraction,
+    setting,
+    guildId,
+    client
+) {
     const modalCustomId = `config_wizard_modal:${setting}:${guildId}`;
 
     const submitted = await selectInteraction
@@ -584,17 +696,39 @@ async function handleSettingModalSubmit(selectInteraction, rootInteraction, sett
 
     try {
         const value = resolveSettingModalValue(setting, submitted);
-        await ConfigService.updateSetting(client, guildId, setting, value, submitted.user.id);
+
+        await ConfigService.updateSetting(
+            client,
+            guildId,
+            setting,
+            value,
+            submitted.user.id
+        );
 
         await submitted.reply({
-            embeds: [successEmbed('تم تحديث الإعدادات', buildSettingSuccessMessage(setting, value, submitted.guild))],
+            embeds: [
+                successEmbed(
+                    'تم تحديث الإعدادات',
+                    buildSettingSuccessMessage(
+                        setting,
+                        value,
+                        submitted.guild
+                    )
+                )
+            ],
             flags: MessageFlags.Ephemeral,
         });
 
         const updatedConfig = await getGuildConfig(client, guildId);
-        await refreshDashboard(rootInteraction, updatedConfig, submitted.guild);
+
+        await refreshDashboard(
+            rootInteraction,
+            updatedConfig,
+            submitted.guild
+        );
     } catch (error) {
         logger.error('Config wizard modal submit error:', error);
+
         await replyUserError(submitted, {
             type: ErrorTypes.CONFIGURATION,
             message: error.message || 'يرجى المحاولة مرة أخرى.',
@@ -604,16 +738,22 @@ async function handleSettingModalSubmit(selectInteraction, rootInteraction, sett
 
 export default {
     slashOnly: true,
+
     data: new SlashCommandBuilder()
         .setName('configwizard')
         .setDescription('فتح لوحة إعدادات السيرفر ومعالج الإعداد')
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
         .setDMPermission(false),
+
     category: 'Core',
 
     async execute(interaction) {
         try {
-            const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
+            const deferSuccess = await InteractionHelper.safeDefer(
+                interaction,
+                { flags: MessageFlags.Ephemeral }
+            );
+
             if (!deferSuccess) {
                 return;
             }
@@ -625,13 +765,33 @@ export default {
                 });
             }
 
-            const guildConfig = await getGuildConfig(interaction.client, interaction.guildId);
-            const embed = buildDashboardEmbed(guildConfig, interaction.guild);
-            const components = [buildButtonRow(guildConfig, interaction.guildId), buildSettingsSelect(interaction.guildId)];
+            const guildConfig = await getGuildConfig(
+                interaction.client,
+                interaction.guildId
+            );
 
-            await InteractionHelper.safeEditReply(interaction, { embeds: [embed], components });
+            const embed = buildDashboardEmbed(
+                guildConfig,
+                interaction.guild
+            );
+
+            const components = [
+                buildButtonRow(
+                    guildConfig,
+                    interaction.guildId
+                ),
+                buildSettingsSelect(
+                    interaction.guildId
+                )
+            ];
+
+            await InteractionHelper.safeEditReply(
+                interaction,
+                { embeds: [embed], components }
+            );
 
             const replyMessage = await interaction.fetchReply().catch(() => null);
+
             if (!replyMessage) {
                 return;
             }
@@ -650,26 +810,51 @@ export default {
                     if (componentInteraction.isButton()) {
                         await componentInteraction.deferUpdate();
 
-                        if (componentInteraction.customId.startsWith(`${WIZARD_BUTTON_ID}:`)) {
-                            const latestConfig = await getGuildConfig(interaction.client, interaction.guildId);
-                            await runSetupWizard(componentInteraction, latestConfig, interaction.guild, interaction.client, interaction);
+                        if (
+                            componentInteraction.customId.startsWith(
+                                `${WIZARD_BUTTON_ID}:`
+                            )
+                        ) {
+                            const latestConfig = await getGuildConfig(
+                                interaction.client,
+                                interaction.guildId
+                            );
+
+                            await runSetupWizard(
+                                componentInteraction,
+                                latestConfig,
+                                interaction.guild,
+                                interaction.client,
+                                interaction
+                            );
                         }
+
                         return;
                     }
 
                     if (componentInteraction.isStringSelectMenu()) {
                         const selected = componentInteraction.values[0];
-                        await showSettingModal(componentInteraction, interaction.guildId, selected);
+
+                        await showSettingModal(
+                            componentInteraction,
+                            interaction.guildId,
+                            selected
+                        );
+
                         await handleSettingModalSubmit(
                             componentInteraction,
                             interaction,
                             selected,
                             interaction.guildId,
-                            interaction.client,
+                            interaction.client
                         );
                     }
                 } catch (error) {
-                    logger.error('Config dashboard interaction error:', error);
+                    logger.error(
+                        'Config dashboard interaction error:',
+                        error
+                    );
+
                     await replyUserError(componentInteraction, {
                         type: ErrorTypes.UNKNOWN,
                         message: 'فشل تنفيذ اختيارك. يرجى المحاولة مرة أخرى.',
@@ -677,7 +862,11 @@ export default {
                 }
             });
         } catch (error) {
-            logger.error('Config command error:', error);
+            logger.error(
+                'Config command error:',
+                error
+            );
+
             await replyUserError(interaction, {
                 type: ErrorTypes.CONFIGURATION,
                 message: 'فشل فتح لوحة إعدادات السيرفر. يرجى المحاولة مرة أخرى.',

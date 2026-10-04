@@ -58,8 +58,8 @@ export default {
             logger.info(`execute - calculated latency: ${latency}ms, apiLatency: ${apiLatency}ms`);
 
             const embed = createEmbed({ title: "Pong!", description: null }).addFields(
-                { name: "Bot Latency", value: `${latency}ms`, inline: true },
-                { name: "API Latency", value: `${apiLatency}ms`, inline: true },
+                { name: "زمن استجابة البوت", value: `${latency}ms`, inline: true },
+                { name: "زمن استجابة الـ API", value: `${apiLatency}ms`, inline: true },
             );
 
             await InteractionHelper.safeEditReply(interaction, {

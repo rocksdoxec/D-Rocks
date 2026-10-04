@@ -5,7 +5,7 @@ import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
-    .setName("stats")
+    ..setName("stats")
     .setDescription("عرض إحصائيات البوت"),
 
   async execute(interaction) {

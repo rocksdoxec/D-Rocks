@@ -60,19 +60,19 @@ async function buildDashboardEmbed(settings, roles, guild, client) {
         .setDescription(`إدارة إعدادات طلبات التقديم في **${guild.name}**.\nاختر أحد الخيارات بالأسفل لتعديل الإعدادات.`)
         .setColor(getColor('info'))
         .addFields(
-            { name: 'Application Status', value: settings.enabled ? 'Enabled' : 'Disabled', inline: true },
+            { name: 'حالة الطلب', value: settings.enabled ? 'مفعّل' : 'معطّل', inline: true },
             { name: 'Log Channel', value: logChannel, inline: true },
             { name: '\u200B', value: '\u200B', inline: true },
             { name: 'Manager Roles', value: managerRoleList, inline: false },
             { name: 'Questions', value: `${questionCount} configured — first: ${firstQ}`, inline: false },
             { name: 'Application Roles', value: roleList, inline: false },
             {
-                name: 'Retention',
-                value: `Pending: **${settings.pendingApplicationRetentionDays ?? 30}d** · Reviewed: **${settings.reviewedApplicationRetentionDays ?? 14}d**`,
+                name: 'مدة الاحتفاظ',
+                value: ``قيد الانتظار: **${settings.pendingApplicationRetentionDays ?? 30} يوم** · تمت المراجعة: **${settings.reviewedApplicationRetentionDays ?? 14} يوم**`,
                 inline: false,
             },
         )
-        .setFooter({ text: 'Dashboard closes after 15 minutes of inactivity' })
+        .setFooter({ text: 'تغلق لوحة التحكم بعد 15 دقيقة من عدم النشاط' })
         .setTimestamp();
 }
 
@@ -198,20 +198,20 @@ export default {
 async function showApplicationSelector(interaction, roles, settings, guildId, client) {
     const selectMenu = new StringSelectMenuBuilder()
         .setCustomId(`app_select_${guildId}`)
-        .setPlaceholder('Select an application to configure...')
+        .setPlaceholder('اختر طلب تقديم لتعديله...')
         .addOptions(
             roles.map(role =>
                 new StringSelectMenuOptionBuilder()
                     .setLabel(role.name)
-                    .setDescription(`Configure the ${role.name} application`)
+                    .setDescription(`تعديل إعدادات طلب التقديم الخاص بـ ${role.name}`)
                     .setValue(role.roleId)
                     .setEmoji('📋'),
             ),
         );
 
     const embed = new EmbedBuilder()
-        .setTitle('Select Application')
-        .setDescription('Choose which application role you want to configure.')
+        .setTitle('اختيار طلب التقديم')
+        .setDescription('اختر رتبة طلب التقديم التي تريد تعديل إعداداتها.')
         .setColor(getColor('info'));
 
     await InteractionHelper.safeEditReply(interaction, {
@@ -321,7 +321,7 @@ async function showApplicationDashboard(rootInteraction, selectedRole, settings,
                 inline: false 
             },
         )
-        .setFooter({ text: 'Dashboard closes after 10 minutes of inactivity' })
+        .setFooter({ text: 'تغلق لوحة التحكم بعد 15 دقيقة من عدم النشاط' })
         .setTimestamp();
 
     const configMenu = buildApplicationSelectMenu(guildId, selectedRole.roleId);
@@ -652,7 +652,7 @@ function buildApplicationSelectMenu(guildId, roleId) {
         .addOptions(
             new StringSelectMenuOptionBuilder()
                 .setLabel('قناة السجلات')
-                .setDescription('Set the channel where applications are logged')
+                .setDescription('تحديد القناة التي يتم فيها تسجيل طلبات التقديم')
                 .setValue('log_channel')
                 .setEmoji('📢'),
             new StringSelectMenuOptionBuilder()
@@ -661,13 +661,13 @@ function buildApplicationSelectMenu(guildId, roleId) {
                 .setValue('manager_role')
                 .setEmoji('🛡️'),
             new StringSelectMenuOptionBuilder()
-                .setLabel('Edit Questions')
-                .setDescription('Customise the questions shown on the application form')
+                .setLabel('تعديل الأسئلة')
+                .setDescription('تعديل الأسئلة التي تظهر في نموذج التقديم')
                 .setValue('questions')
                 .setEmoji('📝'),
             new StringSelectMenuOptionBuilder()
-                .setLabel('Retention Period')
-                .setDescription('Set how long pending and reviewed applications are kept')
+                .setLabel('مدة الاحتفاظ')
+                .setDescription('تحديد مدة الاحتفاظ بالطلبات قيد المراجعة والطلبات التي تمت مراجعتها')
                 .setValue('retention')
                 .setEmoji('🗑️'),
         );
@@ -682,11 +682,11 @@ async function handleLogChannel(selectInteraction, rootInteraction, settings, ro
 
     const modal = new ModalBuilder()
         .setCustomId(`app_cfg_log_channel_modal_${guildId}_${selectedRoleId || 'global'}`)
-        .setTitle('Configure Log Channel');
+        .setTitle('إعداد قناة السجلات');
 
     const channelSelect = new ChannelSelectMenuBuilder()
         .setCustomId('log_channel')
-        .setPlaceholder('Select a text channel...')
+        .setPlaceholder('اختر قناة نصية...')
         .setMinValues(1)
         .setMaxValues(1)
         .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
@@ -721,7 +721,7 @@ async function handleLogChannel(selectInteraction, rootInteraction, settings, ro
         }
 
         await modalSubmission.reply({
-            embeds: [successEmbed('Log Channel Updated', `Application logs will now be sent to ${channel ?? `<#${channelId}>`}.\nYou can also manage this from \`/logging dashboard\`.`)],
+            embeds: [successEmbed('تم تحديث قناة السجلات', `سيتم الآن إرسال سجلات طلبات التقديم إلى ${channel ?? `<#${channelId}>`}.\nيمكنك أيضًا إدارة ذلك من خلال \`/logging dashboard\`.`)],
             flags: MessageFlags.Ephemeral,
         });
 
@@ -731,7 +731,7 @@ async function handleLogChannel(selectInteraction, rootInteraction, settings, ro
         logger.error('Error in log channel modal:', error);
         await replyUserError(selectInteraction, {
             type: ErrorTypes.UNKNOWN,
-            message: 'An error occurred while updating the log channel.',
+            message: 'حدث خطأ أثناء تحديث قناة السجلات.',
         });
     }
 }
@@ -739,18 +739,18 @@ async function handleLogChannel(selectInteraction, rootInteraction, settings, ro
 async function handleManagerRole(selectInteraction, rootInteraction, settings, roles, guildId, client) {
     const modal = new ModalBuilder()
         .setCustomId(`app_cfg_manager_role_modal_${guildId}`)
-        .setTitle('Configure Manager Roles');
+        .setTitle('إعداد رتب الإدارة');
 
     const roleSelect = new RoleSelectMenuBuilder()
         .setCustomId('manager_roles')
-        .setPlaceholder('Select roles to grant manager access...')
+        .setPlaceholder('اختر الرتب التي تريد منحها صلاحيات الإدارة...')
         .setMinValues(1)
         .setMaxValues(5)
         .setRequired(true);
 
     const roleLabel = new LabelBuilder()
         .setLabel('رتب الإدارة')
-        .setDescription('Selected roles will be toggled on/off as manager roles')
+        .setDescription('سيتم تفعيل أو تعطيل الرتب المحددة كرتب إدارية')
         .setRoleSelectMenuComponent(roleSelect);
 
     modal.addLabelComponents(roleLabel);
@@ -782,7 +782,7 @@ async function handleManagerRole(selectInteraction, rootInteraction, settings, r
             : '`None`';
 
         await modalSubmission.reply({
-            embeds: [successEmbed('Manager Roles Updated', `Current manager roles: ${finalList}`)],
+            embeds: [successEmbed('تم تحديث رتب الإدارة', `رتب الإدارة الحالية: ${finalList}`)],
             flags: MessageFlags.Ephemeral,
         });
 
@@ -792,7 +792,7 @@ async function handleManagerRole(selectInteraction, rootInteraction, settings, r
         logger.error('Error in manager role modal:', error);
         await replyUserError(selectInteraction, {
             type: ErrorTypes.UNKNOWN,
-            message: 'An error occurred while updating manager roles.',
+            message: 'حدث خطأ أثناء تحديث رتب الإدارة.',
         });
     }
 }
@@ -807,12 +807,12 @@ async function handleQuestions(selectInteraction, rootInteraction, settings, rol
 
     const modal = new ModalBuilder()
         .setCustomId('app_cfg_questions')
-        .setTitle('Edit Application Questions')
+        .setTitle('تعديل أسئلة طلب التقديم')
         .addComponents(
             new ActionRowBuilder().addComponents(
                 new TextInputBuilder()
                     .setCustomId('q1')
-                    .setLabel('Question 1 (required)')
+                    .setLabel('السؤال 1 (مطلوب)')
                     .setStyle(TextInputStyle.Short)
                     .setValue(currentQuestions[0] ?? '')
                     .setMaxLength(100)
@@ -822,7 +822,7 @@ async function handleQuestions(selectInteraction, rootInteraction, settings, rol
             new ActionRowBuilder().addComponents(
                 new TextInputBuilder()
                     .setCustomId('q2')
-                    .setLabel('Question 2 (optional)')
+                    .setLabel('السؤال 2 (اختياري)')
                     .setStyle(TextInputStyle.Short)
                     .setValue(currentQuestions[1] ?? '')
                     .setMaxLength(100)
@@ -831,7 +831,7 @@ async function handleQuestions(selectInteraction, rootInteraction, settings, rol
             new ActionRowBuilder().addComponents(
                 new TextInputBuilder()
                     .setCustomId('q3')
-                    .setLabel('Question 3 (optional)')
+                    .setLabel('السؤال 3 (اختياري)')
                     .setStyle(TextInputStyle.Short)
                     .setValue(currentQuestions[2] ?? '')
                     .setMaxLength(100)
@@ -840,7 +840,7 @@ async function handleQuestions(selectInteraction, rootInteraction, settings, rol
             new ActionRowBuilder().addComponents(
                 new TextInputBuilder()
                     .setCustomId('q4')
-                    .setLabel('Question 4 (optional)')
+                    .setLabel('السؤال 4 (اختياري)')
                     .setStyle(TextInputStyle.Short)
                     .setValue(currentQuestions[3] ?? '')
                     .setMaxLength(100)
@@ -849,7 +849,7 @@ async function handleQuestions(selectInteraction, rootInteraction, settings, rol
             new ActionRowBuilder().addComponents(
                 new TextInputBuilder()
                     .setCustomId('q5')
-                    .setLabel('Question 5 (optional)')
+                    .setLabel('السؤال 5 (اختياري)')
                     .setStyle(TextInputStyle.Short)
                     .setValue(currentQuestions[4] ?? '')
                     .setMaxLength(100)
@@ -874,7 +874,7 @@ async function handleQuestions(selectInteraction, rootInteraction, settings, rol
         .filter(Boolean);
 
     if (newQuestions.length === 0) {
-        await replyUserError(submitted, { type: ErrorTypes.USER_INPUT, message: 'At least one question is required.' });
+        await replyUserError(submitted, { type: ErrorTypes.USER_INPUT, message: 'يجب إضافة سؤال واحد على الأقل.' });
         return;
     }
 
@@ -892,7 +892,7 @@ async function handleQuestions(selectInteraction, rootInteraction, settings, rol
     await submitted.reply({
         embeds: [
             successEmbed(
-                '✅ Questions Updated',
+                '✅ تم تحديث الأسئلة'
                 `${newQuestions.length} question${newQuestions.length !== 1 ? 's' : ''} saved.`,
             ),
         ],
@@ -905,23 +905,23 @@ async function handleQuestions(selectInteraction, rootInteraction, settings, rol
 async function handleRoleAdd(selectInteraction, rootInteraction, settings, roles, guildId, client) {
     const modal = new ModalBuilder()
         .setCustomId(`app_cfg_role_add_modal_${guildId}`)
-        .setTitle('Add Application Role');
+        .setTitle(''إضافة رتبة للتقديم');
 
     const roleSelect = new RoleSelectMenuBuilder()
         .setCustomId('application_role')
-        .setPlaceholder('Select the role members can apply for...')
+        .setPlaceholder('اختر الرتبة التي يمكن للأعضاء التقديم عليها...')
         .setMinValues(1)
         .setMaxValues(1)
         .setRequired(true);
 
     const roleLabel = new LabelBuilder()
-        .setLabel('Application Role')
-        .setDescription('Select the Discord role members will be applying for')
+        .setLabel('رتبة التقديم')
+        .setDescription('اختر رتبة Discord التي سيتقدم عليها الأعضاء')
         .setRoleSelectMenuComponent(roleSelect);
 
     const nameInput = new TextInputBuilder()
         .setCustomId('role_name')
-        .setLabel('Display name (leave blank to use role name)')
+        .setLabel('الاسم الظاهر (اتركه فارغًا لاستخدام اسم الرتبة)')
         .setStyle(TextInputStyle.Short)
         .setMaxLength(50)
         .setRequired(false);
@@ -942,7 +942,7 @@ async function handleRoleAdd(selectInteraction, rootInteraction, settings, roles
         const customName = modalSubmission.fields.getTextInputValue('role_name').trim() || role?.name || roleId;
 
         if (roles.some(r => r.roleId === roleId)) {
-            await replyUserError(modalSubmission, { type: ErrorTypes.UNKNOWN, message: `${role ?? roleId} is already an application role.` });
+            await replyUserError(modalSubmission, { type: ErrorTypes.UNKNOWN, message: `${role ?? roleId} هي بالفعل رتبة تقديم.` });
             return;
         }
 
@@ -953,7 +953,7 @@ async function handleRoleAdd(selectInteraction, rootInteraction, settings, roles
         });
 
         await modalSubmission.reply({
-            embeds: [successEmbed('Role Added', `${role ?? roleId} added as **${customName}**.`)],
+            embeds: [successEmbed('تمت إضافة الرتبة', `تمت إضافة ${role ?? roleId} باسم **${customName}**.`)],
             flags: MessageFlags.Ephemeral,
         });
 
@@ -963,7 +963,7 @@ async function handleRoleAdd(selectInteraction, rootInteraction, settings, roles
         logger.error('Error in role add modal:', error);
         await replyUserError(selectInteraction, {
             type: ErrorTypes.UNKNOWN,
-            message: 'An error occurred while adding the application role.',
+            message: 'حدث خطأ أثناء إضافة رتبة التقديم.',
         });
     }
 }
@@ -972,25 +972,25 @@ async function handleRoleRemove(selectInteraction, rootInteraction, settings, ro
     if (roles.length === 0) {
         await replyUserError(selectInteraction, {
             type: ErrorTypes.USER_INPUT,
-            message: 'There are no application roles configured to remove.',
+            message: 'لا توجد رتب تقديم محددة لإزالتها.',
         });
         return;
     }
 
     const modal = new ModalBuilder()
         .setCustomId(`app_cfg_role_remove_modal_${guildId}`)
-        .setTitle('Remove Application Role');
+        .setTitle('إزالة رتبة التقديم');
 
     const roleSelect = new RoleSelectMenuBuilder()
         .setCustomId('remove_role')
-        .setPlaceholder('Select the role to remove...')
+        .setPlaceholder('اختر الرتبة التي تريد إزالتها...')
         .setMinValues(1)
         .setMaxValues(1)
         .setRequired(true);
 
     const roleLabel = new LabelBuilder()
-        .setLabel('Remove Application Role')
-        .setDescription('Select the role to remove from the applications list')
+        .setLabel('إزالة رتبة التقديم')
+        .setDescription('اختر الرتبة التي تريد إزالتها من قائمة طلبات التقديم')
         .setRoleSelectMenuComponent(roleSelect);
 
     modal.addLabelComponents(roleLabel);
@@ -1007,7 +1007,7 @@ async function handleRoleRemove(selectInteraction, rootInteraction, settings, ro
         const index = roles.findIndex(r => r.roleId === roleId);
 
         if (index === -1) {
-            await replyUserError(modalSubmission, { type: ErrorTypes.USER_INPUT, message: `<@&${roleId}> is not in the application roles list.` });
+            await replyUserError(modalSubmission, { type: ErrorTypes.USER_INPUT, message: `<@&${roleId}> ليست موجودة في قائمة رتب التقديم.` });
             return;
         }
 
@@ -1015,7 +1015,7 @@ async function handleRoleRemove(selectInteraction, rootInteraction, settings, ro
         await saveApplicationRoles(client, guildId, roles);
 
         await modalSubmission.reply({
-            embeds: [successEmbed('Role Removed', `<@&${roleId}> has been removed from the application roles.`)],
+            embeds: [successEmbed('تمت إزالة الرتبة' ,`تمت إزالة <@&${roleId}> من رتب التقديم.`)],
             flags: MessageFlags.Ephemeral,
         });
 
@@ -1025,7 +1025,7 @@ async function handleRoleRemove(selectInteraction, rootInteraction, settings, ro
         logger.error('Error in role remove modal:', error);
         await replyUserError(selectInteraction, {
             type: ErrorTypes.UNKNOWN,
-            message: 'An error occurred while removing the application role.',
+            message: 'حدث خطأ أثناء إزالة رتبة التقديم.'
         });
     }
 }
@@ -1033,17 +1033,17 @@ async function handleRoleRemove(selectInteraction, rootInteraction, settings, ro
 async function handleRetention(selectInteraction, rootInteraction, settings, roles, guildId, client) {
     const modal = new ModalBuilder()
         .setCustomId('app_cfg_retention')
-        .setTitle('Application Retention Periods');
+        .setTitle('مدة الاحتفاظ بطلبات التقديم');
 
     const retentionInfo = new TextDisplayBuilder()
         .setContent(
-            '**Pending** — how long unanswered/in-progress applications are kept before being automatically removed.\n' +
-            '**Reviewed** — how long approved or denied applications are kept.\n' +
-            '-# Enter a whole number between 1 and 3650 (max 10 years).',
+            '**قيد الانتظار** — المدة التي يتم خلالها الاحتفاظ بالطلبات التي لم تتم الإجابة عليها أو التي لا تزال قيد المعالجة قبل حذفها تلقائيًا.\n'
+            '**تمت المراجعة** — المدة التي يتم خلالها الاحتفاظ بالطلبات التي تمت الموافقة عليها أو رفضها.\n'
+           '-# أدخل رقمًا صحيحًا بين 1 و3650 (بحد أقصى 10 سنوات).'
         );
 
     const pendingLabel = new LabelBuilder()
-        .setLabel('Pending retention (days)')
+        .setLabel('مدة الاحتفاظ بالطلبات قيد الانتظار (بالأيام)')
         .setTextInputComponent(
             new TextInputBuilder()
                 .setCustomId('pending_days')
@@ -1055,7 +1055,7 @@ async function handleRetention(selectInteraction, rootInteraction, settings, rol
         );
 
     const reviewedLabel = new LabelBuilder()
-        .setLabel('Reviewed retention (days)')
+        .setLabel('مدة الاحتفاظ بالطلبات التي تمت مراجعتها (بالأيام)')
         .setTextInputComponent(
             new TextInputBuilder()
                 .setCustomId('reviewed_days')
@@ -1086,12 +1086,12 @@ async function handleRetention(selectInteraction, rootInteraction, settings, rol
     const reviewedDays = parseInt(submitted.fields.getTextInputValue('reviewed_days').trim(), 10);
 
     if (isNaN(pendingDays) || pendingDays < 1 || pendingDays > 3650) {
-        await replyUserError(submitted, { type: ErrorTypes.VALIDATION, message: 'Pending retention must be a whole number between **1** and **3650** days.' });
+        await replyUserError(submitted, { type: ErrorTypes.VALIDATION, message: 'مدة الاحتفاظ بالطلبات التي تمت مراجعتها (بالأيام)' });
         return;
     }
 
     if (isNaN(reviewedDays) || reviewedDays < 1 || reviewedDays > 3650) {
-        await replyUserError(submitted, { type: ErrorTypes.VALIDATION, message: 'Reviewed retention must be a whole number between **1** and **3650** days.' });
+        await replyUserError(submitted, { type: ErrorTypes.VALIDATION, message: 'يجب أن تكون مدة الاحتفاظ بالطلبات قيد الانتظار رقمًا صحيحًا بين **1** و**3650** يومًا.' });
         return;
     }
 
@@ -1102,8 +1102,8 @@ async function handleRetention(selectInteraction, rootInteraction, settings, rol
     await submitted.reply({
         embeds: [
             successEmbed(
-                '✅ Retention Updated',
-                `Pending applications will be kept for **${pendingDays} days**.\nReviewed applications will be kept for **${reviewedDays} days**.`,
+                '✅ تم تحديث مدة الاحتفاظ'
+                `سيتم الاحتفاظ بالطلبات قيد الانتظار لمدة **${pendingDays} يومًا**.\nسيتم الاحتفاظ بالطلبات التي تمت مراجعتها لمدة **${reviewedDays} يومًا**.`
             ),
         ],
         flags: MessageFlags.Ephemeral,
@@ -1117,7 +1117,7 @@ async function handleDeleteApplication(confirmSubmit, selectedRoleId, guildId, r
         
         const roleIndex = roles.findIndex(r => r.roleId === selectedRoleId);
         if (roleIndex === -1) {
-            await replyUserError(confirmSubmit, { type: ErrorTypes.USER_INPUT, message: 'Application role not found.' });
+            await replyUserError(confirmSubmit, { type: ErrorTypes.USER_INPUT, message: 'لم يتم العثور على رتبة التقديم.' });
             return;
         }
 
@@ -1139,9 +1139,11 @@ async function handleDeleteApplication(confirmSubmit, selectedRoleId, guildId, r
         await confirmSubmit.reply({
             embeds: [
                 successEmbed(
-                    '🗑️ Application Deleted',
-                    ``تم حذف طلب التقديم الخاص بـ <@&${selectedRoleId}> (**${deletedRole.name}**) نهائيًا.\n\n`
-                    `تم حذف **${applicationsToDelete.length}** طلب تقديم`
+                    successEmbed(
+                    '🗑️ تم حذف طلب التقديم',
+                    `تم حذف طلب التقديم الخاص بـ <@&${selectedRoleId}> (**${deletedRole.name}**) نهائيًا.\n\n` +
+                    `تم الحذف: **${applicationsToDelete.length}** طلب تقديم${applicationsToDelete.length !== 1 ? 's' : ''}`
+),
                 ),
             ],
             flags: MessageFlags.Ephemeral,

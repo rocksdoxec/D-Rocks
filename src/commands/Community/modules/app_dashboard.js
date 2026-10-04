@@ -290,12 +290,12 @@ async function showApplicationDashboard(rootInteraction, selectedRole, settings,
         .setColor(isEnabled ? getColor('success') : getColor('error'))
         .addFields(
             { 
-                name: 'الرتبة'
-                value: roleObj ? roleObj.toString() : `<@&${selectedRole.roleId}>`, 
+                name: 'الرتبة',
+                value: roleObj ? roleObj.toString() : `<@&${selectedRole.roleId}>`,
                 inline: true 
             },
             { 
-                name: 'حالة الطلب' 
+                name: 'حالة الطلب',
                 value: isEnabled ? '✅ **Enabled**' : '❌ **Disabled**', 
                 inline: true 
             },
@@ -329,11 +329,11 @@ async function showApplicationDashboard(rootInteraction, selectedRole, settings,
     const controlButtons = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
             .setCustomId(`app_toggle_${selectedRole.roleId}`)
-            ..setLabel(isEnabled ? 'تعطيل الطلب' : 'تفعيل الطلب')
+            .setLabel(isEnabled ? 'تعطيل الطلب' : 'تفعيل الطلب')
             .setStyle(isEnabled ? ButtonStyle.Danger : ButtonStyle.Success),
         new ButtonBuilder()
             .setCustomId(`app_delete_${selectedRole.roleId}`)
-            ..setLabel('حذف الطلب')
+            .setLabel('حذف الطلب')
             .setStyle(ButtonStyle.Danger)
             .setEmoji('🗑️'),
     );
@@ -633,7 +633,7 @@ function setupCollectors(interaction, settings, roles, guildId, client, selected
             if (reason === 'time') {
                 const timeoutEmbed = new EmbedBuilder()
                     .setTitle('Configuration Timeout')
-                    .setDescription('انتهت جلسة لوحة التحكم بسبب عدم النشاط لمدة 10 دقائق.'.\n\nTo continue configuring your applications, please run the command again.')
+                    .setDescription('انتهت جلسة لوحة التحكم بسبب عدم النشاط لمدة 10 دقائق.\n\nللمتابعة في إعداد طلبات التقديم، يرجى تشغيل الأمر مرة أخرى.')
                     .setColor(getColor('warning'));
                     
                 await InteractionHelper.safeEditReply(interaction, {
@@ -1140,8 +1140,8 @@ async function handleDeleteApplication(confirmSubmit, selectedRoleId, guildId, r
             embeds: [
                 successEmbed(
                     '🗑️ Application Deleted',
-                    `The application for <@&${selectedRoleId}> (**${deletedRole.name}**) has been permanently deleted.\n\n` +
-                    `Deleted: **${applicationsToDelete.length}** application${applicationsToDelete.length !== 1 ? 's' : ''}`,
+                    ``تم حذف طلب التقديم الخاص بـ <@&${selectedRoleId}> (**${deletedRole.name}**) نهائيًا.\n\n`
+                    `تم حذف **${applicationsToDelete.length}** طلب تقديم`
                 ),
             ],
             flags: MessageFlags.Ephemeral,
@@ -1149,6 +1149,6 @@ async function handleDeleteApplication(confirmSubmit, selectedRoleId, guildId, r
 
     } catch (error) {
         logger.error('Error in handleDeleteApplication:', error);
-        await replyUserError(confirmSubmit, { type: ErrorTypes.UNKNOWN, message: 'An error occurred while deleting the application. Please try again.' });
+        await replyUserError(confirmSubmit, { type: ErrorTypes.UNKNOWN, message: 'حدث خطأ أثناء حذف طلب التقديم. يرجى المحاولة مرة أخرى.' });
     }
 }

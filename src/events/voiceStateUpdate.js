@@ -170,21 +170,10 @@ export default {
                     channel,
                     state.guild.id
                 );
-            } else if (
-                tempChannelInfo.ownerId === member.id
-            ) {
-                const nextMember =
-                    channel.members.first();
-
-                if (nextMember) {
-                    await transferChannelOwnership(
-                        client,
-                        channel,
-                        state.guild.id,
-                        nextMember.id
-                    );
-                }
             }
+
+            // Ownership is permanent.
+            // The room owner never changes when they leave.
         }
 
         async function handleVoiceMove(
@@ -210,22 +199,10 @@ export default {
                             oldState.channel,
                             oldState.guild.id
                         );
-                    } else if (
-                        tempChannelInfo.ownerId ===
-                        oldState.member.id
-                    ) {
-                        const nextMember =
-                            oldState.channel.members.first();
-
-                        if (nextMember) {
-                            await transferChannelOwnership(
-                                client,
-                                oldState.channel,
-                                oldState.guild.id,
-                                nextMember.id
-                            );
-                        }
                     }
+
+                    // Never transfer ownership.
+                    // The original creator remains the owner.
                 }
             }
 
@@ -291,6 +268,12 @@ export default {
 
                     return;
                 }
+
+                const ownerSettings =
+                    getOwnerRoomSettings(
+                        config,
+                        member.id
+                    );
 
                 const channelOptions =
                     config.channelOptions?.[
@@ -409,6 +392,40 @@ export default {
                     triggerChannel.id
                 );
 
+                // Apply the owner's saved settings to every
+                // newly-created room.
+                if (ownerSettings.locked) {
+                    await tempChannel.permissionOverwrites.edit(
+                        guild.id,
+                        {
+                            Connect: false
+                        }
+                    );
+                }
+
+                for (
+                    const allowedUserId of ownerSettings.allowedUserIds
+                ) {
+                    await tempChannel.permissionOverwrites.edit(
+                        allowedUserId,
+                        {
+                            Connect: true,
+                            Speak: true
+                        }
+                    );
+                }
+
+                for (
+                    const deniedUserId of ownerSettings.deniedUserIds
+                ) {
+                    await tempChannel.permissionOverwrites.edit(
+                        deniedUserId,
+                        {
+                            Connect: false
+                        }
+                    );
+                }
+
                 const controlChannel =
                     await createControlChannel(
                         guild,
@@ -480,8 +497,7 @@ export default {
                 }
             }
         }
-
-        async function deleteTemporaryChannel(
+                async function deleteTemporaryChannel(
             client,
             channel,
             guildId
@@ -531,137 +547,6 @@ export default {
             } catch (error) {
                 logger.error(
                     `Failed to delete temporary channel ${channel.id}:`,
-                    error
-                );
-            }
-        }
-
-        async function transferChannelOwnership(
-            client,
-            channel,
-            guildId,
-            newOwnerId
-        ) {
-            try {
-                const config =
-                    await getJoinToCreateConfig(
-                        client,
-                        guildId
-                    );
-
-                const tempChannelInfo =
-                    config.temporaryChannels[
-                        channel.id
-                    ];
-
-                if (!tempChannelInfo) return;
-
-                const oldOwnerId =
-                    tempChannelInfo.ownerId;
-
-                tempChannelInfo.ownerId =
-                    newOwnerId;
-
-                await client.db.set(
-                    `guild:${guildId}:jointocreate`,
-                    config
-                );
-
-                const newOwner =
-                    await channel.guild.members.fetch(
-                        newOwnerId
-                    );
-
-                if (newOwner) {
-                    const channelOptions =
-                        config.channelOptions?.[
-                            tempChannelInfo
-                                .triggerChannelId
-                        ] || {};
-
-                    const nameTemplate =
-                        channelOptions.nameTemplate ||
-                        config.channelNameTemplate ||
-                        "{username}'s Room";
-
-                    const newChannelName =
-                        sanitizeVoiceChannelName(
-                            formatChannelName(
-                                nameTemplate,
-                                {
-                                    username:
-                                        newOwner.user.username,
-                                    userTag:
-                                        newOwner.user.tag,
-                                    displayName:
-                                        newOwner.displayName,
-                                    guildName:
-                                        channel.guild.name,
-                                    channelName:
-                                        channel.guild.channels.cache.get(
-                                            tempChannelInfo.triggerChannelId
-                                        )?.name ||
-                                        'Voice Channel'
-                                }
-                            )
-                        );
-
-                    await channel.setName(
-                        newChannelName
-                    );
-
-                    if (
-                        tempChannelInfo.controlChannelId
-                    ) {
-                        const controlChannel =
-                            channel.guild.channels.cache.get(
-                                tempChannelInfo.controlChannelId
-                            );
-
-                        if (controlChannel) {
-                            if (oldOwnerId) {
-                                await controlChannel
-                                    .permissionOverwrites
-                                    .delete(
-                                        oldOwnerId
-                                    )
-                                    .catch(() => {});
-                            }
-
-                            await controlChannel
-                                .permissionOverwrites
-                                .edit(
-                                    newOwnerId,
-                                    {
-                                        ViewChannel:
-                                            true,
-                                        SendMessages:
-                                            true,
-                                        ReadMessageHistory:
-                                            true
-                                    }
-                                )
-                                .catch(() => {});
-
-                            await controlChannel
-                                .setName(
-                                    `${newChannelName}・control`.slice(
-                                        0,
-                                        100
-                                    )
-                                )
-                                .catch(() => {});
-                        }
-                    }
-                }
-
-                logger.info(
-                    `Transferred ownership of temporary channel ${channel.id} to user ${newOwnerId}`
-                );
-
-            } catch (error) {
-                logger.error(
-                    `Failed to transfer ownership of channel ${channel.id}:`,
                     error
                 );
             }
@@ -802,9 +687,11 @@ async function sendControlPanel(
         await controlChannel.send({
             content:
                 `👑 <@${ownerId}>`,
+
             embeds: [
                 createPanelEmbed()
             ],
+
             components: [
                 createButtons()
             ]
@@ -899,6 +786,15 @@ async function sendControlPanel(
                                 }
                             );
 
+                        await saveOwnerRoomSettings(
+                            interaction.client,
+                            interaction.guild.id,
+                            tempInfo.ownerId,
+                            {
+                                locked: true
+                            }
+                        );
+
                         await interaction.reply({
                             content:
                                 '🔒 تم قفل الروم. الأشخاص الموجودون حاليًا سيبقون داخلها.',
@@ -920,6 +816,15 @@ async function sendControlPanel(
                                     Connect: true
                                 }
                             );
+
+                        await saveOwnerRoomSettings(
+                            interaction.client,
+                            interaction.guild.id,
+                            tempInfo.ownerId,
+                            {
+                                locked: false
+                            }
+                        );
 
                         await interaction.reply({
                             content:
@@ -1111,8 +1016,7 @@ async function sendControlPanel(
                         return;
                     }
                 }
-
-                /*
+                                /*
                  * اختيار شخص
                  */
 
@@ -1164,6 +1068,35 @@ async function sendControlPanel(
                                 }
                             );
 
+                        const addSettings =
+                            getOwnerRoomSettings(
+                                config,
+                                tempInfo.ownerId
+                            );
+
+                        addSettings.allowedUserIds =
+                            addSettings.allowedUserIds.filter(
+                                userId =>
+                                    userId !== selectedUserId
+                            );
+
+                        addSettings.allowedUserIds.push(
+                            selectedUserId
+                        );
+
+                        addSettings.deniedUserIds =
+                            addSettings.deniedUserIds.filter(
+                                userId =>
+                                    userId !== selectedUserId
+                            );
+
+                        await saveOwnerRoomSettings(
+                            interaction.client,
+                            interaction.guild.id,
+                            tempInfo.ownerId,
+                            addSettings
+                        );
+
                         await interaction.update({
                             content:
                                 `👑 <@${tempInfo.ownerId}>`,
@@ -1194,6 +1127,35 @@ async function sendControlPanel(
                                     Connect: false
                                 }
                             );
+
+                        const removeSettings =
+                            getOwnerRoomSettings(
+                                config,
+                                tempInfo.ownerId
+                            );
+
+                        removeSettings.deniedUserIds =
+                            removeSettings.deniedUserIds.filter(
+                                userId =>
+                                    userId !== selectedUserId
+                            );
+
+                        removeSettings.deniedUserIds.push(
+                            selectedUserId
+                        );
+
+                        removeSettings.allowedUserIds =
+                            removeSettings.allowedUserIds.filter(
+                                userId =>
+                                    userId !== selectedUserId
+                            );
+
+                        await saveOwnerRoomSettings(
+                            interaction.client,
+                            interaction.guild.id,
+                            tempInfo.ownerId,
+                            removeSettings
+                        );
 
                         await interaction.update({
                             content:
@@ -1232,6 +1194,84 @@ async function sendControlPanel(
         }
     );
 }
+
+function getOwnerRoomSettings(
+    config,
+    ownerId
+) {
+    const saved =
+        config.ownerRoomSettings?.[ownerId] || {};
+
+    return {
+        locked: Boolean(saved.locked),
+
+        allowedUserIds: Array.isArray(
+            saved.allowedUserIds
+        )
+            ? [...new Set(saved.allowedUserIds)]
+            : [],
+
+        deniedUserIds: Array.isArray(
+            saved.deniedUserIds
+        )
+            ? [...new Set(saved.deniedUserIds)]
+            : []
+    };
+}
+        async function saveOwnerRoomSettings(
+            client,
+            guildId,
+            ownerId,
+            settings
+        ) {
+            const config =
+                await getJoinToCreateConfig(
+                    client,
+                    guildId
+                );
+
+            if (!config.ownerRoomSettings) {
+                config.ownerRoomSettings = {};
+            }
+
+            config.ownerRoomSettings[ownerId] = {
+                locked: Boolean(settings.locked),
+                allowedUserIds: [
+                    ...new Set(
+                        settings.allowedUserIds || []
+                    )
+                ],
+                deniedUserIds: [
+                    ...new Set(
+                        settings.deniedUserIds || []
+                    )
+                ]
+            };
+
+            await client.db.set(
+                `guild:${guildId}:jointocreate`,
+                config
+            );
+
+            return config.ownerRoomSettings[ownerId];
+        }
+
+        if (
+            client.config?.features?.music
+        ) {
+            handleMusicVoiceState(
+                client,
+                oldState,
+                newState
+            ).catch(error => {
+                logger.error(
+                    'Music voice state handler error:',
+                    error
+                );
+            });
+        }
+    }
+};
 
 function sanitizeVoiceChannelName(
     inputName

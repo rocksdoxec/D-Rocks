@@ -24,6 +24,7 @@ import { logger } from '../utils/logger.js';
 import { handleMusicVoiceState } from '../services/music/musicVoiceState.js';
 
 const channelCreationCooldown = new Map();
+
 const VOICE_CREATE_COOLDOWN_MS = 2000;
 const MAX_CHANNEL_NAME_LENGTH = 100;
 const FALLBACK_CHANNEL_NAME = 'Voice Room';
@@ -33,7 +34,7 @@ export default {
     name: 'voiceStateUpdate',
 
     async execute(oldState, newState, client) {
-        if (newState.member.user.bot) return;
+        if (newState.member?.user?.bot) return;
 
         const guildId = newState.guild.id;
         const userId = newState.member.id;
@@ -42,28 +43,53 @@ export default {
         cleanupCooldownEntries();
 
         try {
-            const config = await getJoinToCreateConfig(client, guildId);
+            const config = await getJoinToCreateConfig(
+                client,
+                guildId
+            );
 
-            if (!config.enabled || config.triggerChannels.length === 0) {
+            if (
+                !config ||
+                !config.enabled ||
+                !Array.isArray(config.triggerChannels) ||
+                config.triggerChannels.length === 0
+            ) {
                 return;
             }
 
+            // دخول روم
             if (!oldState.channel && newState.channel) {
-                await handleVoiceJoin(client, newState, config);
+                await handleVoiceJoin(
+                    client,
+                    newState,
+                    config,
+                    cooldownKey
+                );
             }
 
+            // خروج من روم
             if (oldState.channel && !newState.channel) {
-                await handleVoiceLeave(client, oldState, config);
+                await handleVoiceLeave(
+                    client,
+                    oldState,
+                    config
+                );
             }
 
+            // الانتقال من روم إلى روم
             if (
                 oldState.channel &&
                 newState.channel &&
                 oldState.channel.id !== newState.channel.id
             ) {
-                await handleVoiceMove(client, oldState, newState, config);
+                await handleVoiceMove(
+                    client,
+                    oldState,
+                    newState,
+                    config,
+                    cooldownKey
+                );
             }
-
         } catch (error) {
             logger.error(
                 `Error in voiceStateUpdate for guild ${guildId}:`,
@@ -71,490 +97,11 @@ export default {
             );
         }
 
-        async function handleVoiceJoin(client, state, config) {
-            const { channel, member } = state;
-
-            if (!config.triggerChannels.includes(channel.id)) {
-                return;
-            }
-
-            const now = Date.now();
-
-            if (channelCreationCooldown.has(cooldownKey)) {
-                const lastCreation =
-                    channelCreationCooldown.get(cooldownKey);
-
-                if (
-                    now - lastCreation <
-                    VOICE_CREATE_COOLDOWN_MS
-                ) {
-                    logger.warn(
-                        `User ${member.id} is on cooldown for channel creation`
-                    );
-                    return;
-                }
-            }
-
-            const existingTempChannel = Object.keys(
-                config.temporaryChannels || {}
-            ).find(tempChannelId => {
-                const tempInfo =
-                    config.temporaryChannels[tempChannelId];
-
-                return (
-                    tempInfo &&
-                    tempInfo.ownerId === member.id
-                );
-            });
-
-            if (existingTempChannel) {
-                const tempChannel =
-                    state.guild.channels.cache.get(
-                        existingTempChannel
-                    );
-
-                if (tempChannel) {
-                    try {
-                        await member.voice.setChannel(
-                            tempChannel
-                        );
-                        return;
-                    } catch (error) {
-                        logger.warn(
-                            `Failed to move user ${member.id} to existing channel ${existingTempChannel}:`,
-                            error
-                        );
-                    }
-                }
-            }
-
-            if (member.voice.channel?.id !== channel.id) {
-                return;
-            }
-
-            channelCreationCooldown.set(
-                cooldownKey,
-                now
-            );
-
-            trimCooldownMapIfNeeded();
-
-            await createTemporaryChannel(
-                client,
-                state,
-                config
-            );
-        }
-
-        async function handleVoiceLeave(
-            client,
-            state,
-            config
-        ) {
-            const { channel, member } = state;
-
-            const tempChannelInfo =
-                await getTemporaryChannelInfo(
-                    client,
-                    state.guild.id,
-                    channel.id
-                );
-
-            if (!tempChannelInfo) {
-                return;
-            }
-
-            if (channel.members.size === 0) {
-                await deleteTemporaryChannel(
-                    client,
-                    channel,
-                    state.guild.id
-                );
-            }
-
-            // Ownership is permanent.
-            // The room owner never changes when they leave.
-        }
-
-        async function handleVoiceMove(
-            client,
-            oldState,
-            newState,
-            config
-        ) {
-            if (oldState.channel) {
-                const tempChannelInfo =
-                    await getTemporaryChannelInfo(
-                        client,
-                        oldState.guild.id,
-                        oldState.channel.id
-                    );
-
-                if (tempChannelInfo) {
-                    if (
-                        oldState.channel.members.size === 0
-                    ) {
-                        await deleteTemporaryChannel(
-                            client,
-                            oldState.channel,
-                            oldState.guild.id
-                        );
-                    }
-
-                    // Never transfer ownership.
-                    // The original creator remains the owner.
-                }
-            }
-
-            if (
-                config.triggerChannels.includes(
-                    newState.channel.id
-                ) &&
-                !config.triggerChannels.includes(
-                    oldState.channel?.id
-                )
-            ) {
-                await handleVoiceJoin(
-                    client,
-                    newState,
-                    config
-                );
-            }
-        }
-
-        async function createTemporaryChannel(
-            client,
-            state,
-            config
-        ) {
-            const {
-                channel: triggerChannel,
-                member,
-                guild
-            } = state;
-
-            try {
-                const me = guild.members.me;
-
-                if (!me) {
-                    logger.warn(
-                        `Bot member cache unavailable while creating temporary channel in guild ${guild.id}`
-                    );
-
-                    channelCreationCooldown.delete(
-                        cooldownKey
-                    );
-
-                    return;
-                }
-
-                const triggerPermissions =
-                    triggerChannel.permissionsFor(me);
-
-                if (
-                    !triggerPermissions?.has([
-                        PermissionFlagsBits.ManageChannels,
-                        PermissionFlagsBits.MoveMembers,
-                        PermissionFlagsBits.Connect
-                    ])
-                ) {
-                    logger.warn(
-                        `Missing required permissions for temporary channel creation in guild ${guild.id}`
-                    );
-
-                    channelCreationCooldown.delete(
-                        cooldownKey
-                    );
-
-                    return;
-                }
-
-                const ownerSettings =
-                    getOwnerRoomSettings(
-                        config,
-                        member.id
-                    );
-
-                const channelOptions =
-                    config.channelOptions?.[
-                        triggerChannel.id
-                    ] || {};
-
-                const nameTemplate =
-                    channelOptions.nameTemplate ||
-                    config.channelNameTemplate ||
-                    "{username}'s Room";
-
-                let userLimit =
-                    channelOptions.userLimit ??
-                    config.userLimit ??
-                    0;
-
-                userLimit = Math.max(
-                    0,
-                    Math.min(99, userLimit || 0)
-                );
-
-                const existingChannels =
-                    guild.channels.cache.filter(
-                        c =>
-                            c.parentId ===
-                                triggerChannel.parentId &&
-                            c.name.startsWith(
-                                triggerChannel.name
-                            )
-                    ).size;
-
-                let finalName;
-
-                if (
-                    nameTemplate.includes(
-                        '{username}'
-                    ) ||
-                    nameTemplate.includes(
-                        '{displayName}'
-                    )
-                ) {
-                    finalName =
-                        formatChannelName(
-                            nameTemplate,
-                            {
-                                username:
-                                    member.user.username,
-                                userTag:
-                                    member.user.tag,
-                                displayName:
-                                    member.displayName,
-                                guildName:
-                                    guild.name,
-                                channelName:
-                                    triggerChannel.name
-                            }
-                        );
-                } else {
-                    finalName =
-                        `${triggerChannel.name} ${existingChannels + 1}`;
-                }
-
-                const channelName =
-                    sanitizeVoiceChannelName(
-                        finalName
-                    );
-
-                if (
-                    !member.voice?.channel ||
-                    member.voice.channel.id !==
-                        triggerChannel.id
-                ) {
-                    channelCreationCooldown.delete(
-                        cooldownKey
-                    );
-
-                    return;
-                }
-
-                const tempChannel =
-                    await guild.channels.create({
-                        name: channelName,
-                        type: ChannelType.GuildVoice,
-                        parent:
-                            triggerChannel.parentId,
-                        userLimit:
-                            userLimit === 0
-                                ? undefined
-                                : userLimit,
-
-                        permissionOverwrites: [
-                            {
-                                id: member.id,
-                                allow: [
-                                    'Connect',
-                                    'Speak',
-                                    'PrioritySpeaker',
-                                    'MoveMembers'
-                                ]
-                            },
-                            {
-                                id: guild.id,
-                                allow: [
-                                    'Connect',
-                                    'Speak'
-                                ]
-                            }
-                        ]
-                    });
-
-                await registerTemporaryChannel(
-                    client,
-                    guild.id,
-                    tempChannel.id,
-                    member.id,
-                    triggerChannel.id
-                );
-
-                // Apply the owner's saved settings to every
-                // newly-created room.
-                if (ownerSettings.locked) {
-                    await tempChannel.permissionOverwrites.edit(
-                        guild.id,
-                        {
-                            Connect: false
-                        }
-                    );
-                }
-
-                for (
-                    const allowedUserId of ownerSettings.allowedUserIds
-                ) {
-                    await tempChannel.permissionOverwrites.edit(
-                        allowedUserId,
-                        {
-                            Connect: true,
-                            Speak: true
-                        }
-                    );
-                }
-
-                for (
-                    const deniedUserId of ownerSettings.deniedUserIds
-                ) {
-                    await tempChannel.permissionOverwrites.edit(
-                        deniedUserId,
-                        {
-                            Connect: false
-                        }
-                    );
-                }
-
-                const controlChannel =
-                    await createControlChannel(
-                        guild,
-                        tempChannel,
-                        member
-                    );
-
-                const savedConfig =
-                    await getJoinToCreateConfig(
-                        client,
-                        guild.id
-                    );
-
-                if (
-                    savedConfig.temporaryChannels?.[
-                        tempChannel.id
-                    ]
-                ) {
-                    savedConfig.temporaryChannels[
-                        tempChannel.id
-                    ].controlChannelId =
-                        controlChannel.id;
-
-                    await client.db.set(
-                        `guild:${guild.id}:jointocreate`,
-                        savedConfig
-                    );
-                }
-
-                await sendControlPanel(
-                    controlChannel,
-                    tempChannel,
-                    member.id
-                );
-
-                if (
-                    member.voice?.channel?.id ===
-                    triggerChannel.id
-                ) {
-                    await member.voice.setChannel(
-                        tempChannel
-                    );
-                }
-
-                logger.info(
-                    `Created temporary voice channel ${tempChannel.name} (${tempChannel.id}) and control channel ${controlChannel.id} for user ${member.user.tag}`
-                );
-
-            } catch (error) {
-                logger.error(
-                    `Failed to create temporary channel for user ${member.user.tag}:`,
-                    error
-                );
-
-                channelCreationCooldown.delete(
-                    cooldownKey
-                );
-
-                try {
-                    await member.send({
-                        content:
-                            '❌ تعذر إنشاء رومك الصوتية المؤقتة. يرجى التواصل مع أحد مسؤولي السيرفر.'
-                    });
-                } catch (dmError) {
-                    logger.debug(
-                        `Unable to send temporary channel failure DM to user ${member.id}:`,
-                        dmError
-                    );
-                }
-            }
-        }
-                async function deleteTemporaryChannel(
-            client,
-            channel,
-            guildId
-        ) {
-            try {
-                const config =
-                    await getJoinToCreateConfig(
-                        client,
-                        guildId
-                    );
-
-                const tempInfo =
-                    config.temporaryChannels?.[
-                        channel.id
-                    ];
-
-                const controlChannelId =
-                    tempInfo?.controlChannelId;
-
-                await unregisterTemporaryChannel(
-                    client,
-                    guildId,
-                    channel.id
-                );
-
-                if (controlChannelId) {
-                    const controlChannel =
-                        channel.guild.channels.cache.get(
-                            controlChannelId
-                        );
-
-                    if (controlChannel) {
-                        await controlChannel.delete(
-                            'Temporary voice channel deleted'
-                        );
-                    }
-                }
-
-                await channel.delete(
-                    'Temporary voice channel - empty'
-                );
-
-                logger.info(
-                    `Deleted temporary voice channel ${channel.name} (${channel.id})`
-                );
-
-            } catch (error) {
-                logger.error(
-                    `Failed to delete temporary channel ${channel.id}:`,
-                    error
-                );
-            }
-        }
-
-        if (
-            client.config?.features?.music
-        ) {
+        /*
+         * Music voice state handler
+         * مهم: موجود هنا مرة واحدة فقط وداخل execute.
+         */
+        if (client.config?.features?.music) {
             handleMusicVoiceState(
                 client,
                 oldState,
@@ -568,6 +115,594 @@ export default {
         }
     }
 };
+
+/* =========================================================
+ * Voice Join
+ * ========================================================= */
+
+async function handleVoiceJoin(
+    client,
+    state,
+    config,
+    cooldownKey
+) {
+    const { channel, member } = state;
+
+    if (!channel || !member) return;
+
+    if (!config.triggerChannels.includes(channel.id)) {
+        return;
+    }
+
+    const now = Date.now();
+
+    if (channelCreationCooldown.has(cooldownKey)) {
+        const lastCreation =
+            channelCreationCooldown.get(cooldownKey);
+
+        if (
+            now - lastCreation <
+            VOICE_CREATE_COOLDOWN_MS
+        ) {
+            logger.warn(
+                `User ${member.id} is on cooldown for channel creation`
+            );
+
+            return;
+        }
+    }
+
+    /*
+     * إذا عنده روم مؤقت موجود بالفعل،
+     * رجعه له بدل إنشاء روم جديد.
+     */
+    const temporaryChannels =
+        config.temporaryChannels || {};
+
+    const existingTempChannel =
+        Object.keys(temporaryChannels).find(
+            tempChannelId => {
+                const tempInfo =
+                    temporaryChannels[tempChannelId];
+
+                return (
+                    tempInfo &&
+                    tempInfo.ownerId === member.id
+                );
+            }
+        );
+
+    if (existingTempChannel) {
+        const tempChannel =
+            state.guild.channels.cache.get(
+                existingTempChannel
+            );
+
+        if (tempChannel) {
+            try {
+                await member.voice.setChannel(
+                    tempChannel
+                );
+
+                return;
+            } catch (error) {
+                logger.warn(
+                    `Failed to move user ${member.id} to existing channel ${existingTempChannel}:`,
+                    error
+                );
+            }
+        }
+    }
+
+    /*
+     * نتأكد أن العضو ما زال داخل الـ trigger.
+     */
+    if (member.voice.channel?.id !== channel.id) {
+        return;
+    }
+
+    channelCreationCooldown.set(
+        cooldownKey,
+        now
+    );
+
+    trimCooldownMapIfNeeded();
+
+    await createTemporaryChannel(
+        client,
+        state,
+        config,
+        cooldownKey
+    );
+}
+
+/* =========================================================
+ * Voice Leave
+ * ========================================================= */
+
+async function handleVoiceLeave(
+    client,
+    state,
+    config
+) {
+    const { channel } = state;
+
+    if (!channel) return;
+
+    const tempChannelInfo =
+        await getTemporaryChannelInfo(
+            client,
+            state.guild.id,
+            channel.id
+        );
+
+    if (!tempChannelInfo) {
+        return;
+    }
+
+    /*
+     * الملكية دائمة.
+     * خروج المالك لا ينقل الملكية لشخص آخر.
+     *
+     * إذا أصبح الروم فارغًا يتم حذفه.
+     */
+    if (channel.members.size === 0) {
+        await deleteTemporaryChannel(
+            client,
+            channel,
+            state.guild.id
+        );
+    }
+}
+
+/* =========================================================
+ * Voice Move
+ * ========================================================= */
+
+async function handleVoiceMove(
+    client,
+    oldState,
+    newState,
+    config,
+    cooldownKey
+) {
+    /*
+     * معالجة الروم القديم.
+     */
+    if (oldState.channel) {
+        const tempChannelInfo =
+            await getTemporaryChannelInfo(
+                client,
+                oldState.guild.id,
+                oldState.channel.id
+            );
+
+        if (tempChannelInfo) {
+            /*
+             * لا ننقل الملكية.
+             * إذا أصبح الروم فارغًا نحذفه.
+             */
+            if (
+                oldState.channel.members.size === 0
+            ) {
+                await deleteTemporaryChannel(
+                    client,
+                    oldState.channel,
+                    oldState.guild.id
+                );
+            }
+        }
+    }
+
+    /*
+     * إذا انتقل المستخدم إلى الـ trigger
+     * من روم آخر، أنشئ له رومًا مؤقتًا.
+     */
+    if (
+        newState.channel &&
+        config.triggerChannels.includes(
+            newState.channel.id
+        ) &&
+        !config.triggerChannels.includes(
+            oldState.channel?.id
+        )
+    ) {
+        await handleVoiceJoin(
+            client,
+            newState,
+            config,
+            cooldownKey
+        );
+    }
+}
+
+/* =========================================================
+ * Create Temporary Channel
+ * ========================================================= */
+
+async function createTemporaryChannel(
+    client,
+    state,
+    config,
+    cooldownKey
+) {
+    const {
+        channel: triggerChannel,
+        member,
+        guild
+    } = state;
+
+    try {
+        const me = guild.members.me;
+
+        if (!me) {
+            logger.warn(
+                `Bot member cache unavailable while creating temporary channel in guild ${guild.id}`
+            );
+
+            channelCreationCooldown.delete(
+                cooldownKey
+            );
+
+            return;
+        }
+
+        const triggerPermissions =
+            triggerChannel.permissionsFor(me);
+
+        if (
+            !triggerPermissions?.has(
+                PermissionFlagsBits.ManageChannels
+            ) ||
+            !triggerPermissions?.has(
+                PermissionFlagsBits.MoveMembers
+            ) ||
+            !triggerPermissions?.has(
+                PermissionFlagsBits.Connect
+            )
+        ) {
+            logger.warn(
+                `Missing required permissions for temporary channel creation in guild ${guild.id}`
+            );
+
+            channelCreationCooldown.delete(
+                cooldownKey
+            );
+
+            return;
+        }
+
+        /*
+         * إعدادات المالك المحفوظة.
+         */
+        const ownerSettings =
+            getOwnerRoomSettings(
+                config,
+                member.id
+            );
+
+        const channelOptions =
+            config.channelOptions?.[
+                triggerChannel.id
+            ] || {};
+
+        const nameTemplate =
+            channelOptions.nameTemplate ||
+            config.channelNameTemplate ||
+            "{username}'s Room";
+
+        let userLimit =
+            channelOptions.userLimit ??
+            config.userLimit ??
+            0;
+
+        userLimit = Math.max(
+            0,
+            Math.min(
+                99,
+                Number(userLimit) || 0
+            )
+        );
+
+        const existingChannels =
+            guild.channels.cache.filter(
+                c =>
+                    c.parentId ===
+                        triggerChannel.parentId &&
+                    c.name.startsWith(
+                        triggerChannel.name
+                    )
+            ).size;
+
+        let finalName;
+
+        if (
+            nameTemplate.includes('{username}') ||
+            nameTemplate.includes('{displayName}')
+        ) {
+            finalName = formatChannelName(
+                nameTemplate,
+                {
+                    username:
+                        member.user.username,
+
+                    userTag:
+                        member.user.tag,
+
+                    displayName:
+                        member.displayName,
+
+                    guildName:
+                        guild.name,
+
+                    channelName:
+                        triggerChannel.name
+                }
+            );
+        } else {
+            finalName =
+                `${triggerChannel.name} ${existingChannels + 1}`;
+        }
+
+        const channelName =
+            sanitizeVoiceChannelName(
+                finalName
+            );
+
+        /*
+         * تأكد أن العضو ما زال داخل trigger.
+         */
+        if (
+            !member.voice?.channel ||
+            member.voice.channel.id !==
+                triggerChannel.id
+        ) {
+            channelCreationCooldown.delete(
+                cooldownKey
+            );
+
+            return;
+        }
+
+        const tempChannel =
+            await guild.channels.create({
+                name: channelName,
+
+                type: ChannelType.GuildVoice,
+
+                parent:
+                    triggerChannel.parentId,
+
+                ...(userLimit > 0
+                    ? { userLimit }
+                    : {}),
+
+                permissionOverwrites: [
+                    {
+                        id: member.id,
+
+                        allow: [
+                            PermissionFlagsBits.Connect,
+                            PermissionFlagsBits.Speak,
+                            PermissionFlagsBits.PrioritySpeaker,
+                            PermissionFlagsBits.MoveMembers
+                        ]
+                    },
+
+                    {
+                        id: guild.id,
+
+                        allow: [
+                            PermissionFlagsBits.Connect,
+                            PermissionFlagsBits.Speak
+                        ]
+                    }
+                ]
+            });
+
+        /*
+         * تسجيل الروم المؤقت.
+         */
+        await registerTemporaryChannel(
+            client,
+            guild.id,
+            tempChannel.id,
+            member.id,
+            triggerChannel.id
+        );
+
+        /*
+         * تطبيق إعدادات المالك المحفوظة.
+         */
+
+        if (ownerSettings.locked) {
+            await tempChannel.permissionOverwrites.edit(
+                guild.id,
+                {
+                    Connect: false
+                }
+            );
+        }
+
+        for (
+            const allowedUserId of
+                ownerSettings.allowedUserIds
+        ) {
+            if (allowedUserId === member.id) {
+                continue;
+            }
+
+            await tempChannel.permissionOverwrites.edit(
+                allowedUserId,
+                {
+                    Connect: true,
+                    Speak: true
+                }
+            );
+        }
+
+        for (
+            const deniedUserId of
+                ownerSettings.deniedUserIds
+        ) {
+            if (deniedUserId === member.id) {
+                continue;
+            }
+
+            await tempChannel.permissionOverwrites.edit(
+                deniedUserId,
+                {
+                    Connect: false
+                }
+            );
+        }
+
+        /*
+         * إنشاء روم التحكم.
+         */
+        const controlChannel =
+            await createControlChannel(
+                guild,
+                tempChannel,
+                member
+            );
+
+        /*
+         * حفظ controlChannelId.
+         */
+        const savedConfig =
+            await getJoinToCreateConfig(
+                client,
+                guild.id
+            );
+
+        if (
+            savedConfig?.temporaryChannels?.[
+                tempChannel.id
+            ]
+        ) {
+            savedConfig.temporaryChannels[
+                tempChannel.id
+            ].controlChannelId =
+                controlChannel.id;
+
+            await client.db.set(
+                `guild:${guild.id}:jointocreate`,
+                savedConfig
+            );
+        }
+
+        /*
+         * إرسال لوحة التحكم.
+         */
+        await sendControlPanel(
+            controlChannel,
+            tempChannel,
+            member.id
+        );
+
+        /*
+         * نقل المالك للروم الجديد.
+         */
+        if (
+            member.voice?.channel?.id ===
+            triggerChannel.id
+        ) {
+            await member.voice.setChannel(
+                tempChannel
+            );
+        }
+
+        logger.info(
+            `Created temporary voice channel ${tempChannel.name} (${tempChannel.id}) and control channel ${controlChannel.id} for user ${member.user.tag}`
+        );
+    } catch (error) {
+        logger.error(
+            `Failed to create temporary channel for user ${member.user.tag}:`,
+            error
+        );
+
+        channelCreationCooldown.delete(
+            cooldownKey
+        );
+
+        try {
+            await member.send({
+                content:
+                    '❌ تعذر إنشاء رومك الصوتية المؤقتة. يرجى التواصل مع أحد مسؤولي السيرفر.'
+            });
+        } catch (dmError) {
+            logger.debug(
+                `Unable to send temporary channel failure DM to user ${member.id}:`,
+                dmError
+            );
+        }
+    }
+}
+
+/* =========================================================
+ * Delete Temporary Channel
+ * ========================================================= */
+
+async function deleteTemporaryChannel(
+    client,
+    channel,
+    guildId
+) {
+    try {
+        const config =
+            await getJoinToCreateConfig(
+                client,
+                guildId
+            );
+
+        const tempInfo =
+            config?.temporaryChannels?.[
+                channel.id
+            ];
+
+        const controlChannelId =
+            tempInfo?.controlChannelId;
+
+        await unregisterTemporaryChannel(
+            client,
+            guildId,
+            channel.id
+        );
+
+        if (controlChannelId) {
+            const controlChannel =
+                channel.guild.channels.cache.get(
+                    controlChannelId
+                );
+
+            if (controlChannel) {
+                await controlChannel.delete(
+                    'Temporary voice channel deleted'
+                );
+            }
+        }
+
+        if (channel.deletable) {
+            await channel.delete(
+                'Temporary voice channel - empty'
+            );
+        }
+
+        logger.info(
+            `Deleted temporary voice channel ${channel.name} (${channel.id})`
+        );
+    } catch (error) {
+        logger.error(
+            `Failed to delete temporary channel ${channel.id}:`,
+            error
+        );
+    }
+}
+
+/* =========================================================
+ * Create Control Channel
+ * ========================================================= */
 
 async function createControlChannel(
     guild,
@@ -585,11 +720,13 @@ async function createControlChannel(
 
         type: ChannelType.GuildText,
 
-        parent: voiceChannel.parentId,
+        parent:
+            voiceChannel.parentId,
 
         permissionOverwrites: [
             {
                 id: guild.id,
+
                 deny: [
                     PermissionFlagsBits.ViewChannel
                 ]
@@ -597,6 +734,7 @@ async function createControlChannel(
 
             {
                 id: owner.id,
+
                 allow: [
                     PermissionFlagsBits.ViewChannel,
                     PermissionFlagsBits.SendMessages,
@@ -608,6 +746,7 @@ async function createControlChannel(
                 ? [
                     {
                         id: me.id,
+
                         allow: [
                             PermissionFlagsBits.ViewChannel,
                             PermissionFlagsBits.SendMessages,
@@ -620,6 +759,10 @@ async function createControlChannel(
         ]
     });
 }
+
+/* =========================================================
+ * Control Panel
+ * ========================================================= */
 
 async function sendControlPanel(
     controlChannel,
@@ -716,7 +859,7 @@ async function sendControlPanel(
                     );
 
                 const tempInfo =
-                    config.temporaryChannels?.[
+                    config?.temporaryChannels?.[
                         channelId
                     ];
 
@@ -734,6 +877,9 @@ async function sendControlPanel(
                     return;
                 }
 
+                /*
+                 * المالك فقط يستطيع استخدام اللوحة.
+                 */
                 if (
                     tempInfo.ownerId !==
                     interaction.user.id
@@ -766,13 +912,14 @@ async function sendControlPanel(
                     return;
                 }
 
-                /*
-                 * الأزرار
-                 */
+                /* =================================================
+                 * Buttons
+                 * ================================================= */
 
-                if (
-                    interaction.isButton()
-                ) {
+                if (interaction.isButton()) {
+                    /*
+                     * قفل
+                     */
                     if (
                         interaction.customId ===
                         `jtc_lock_${channelId}`
@@ -786,13 +933,19 @@ async function sendControlPanel(
                                 }
                             );
 
+                        const settings =
+                            getOwnerRoomSettings(
+                                config,
+                                tempInfo.ownerId
+                            );
+
+                        settings.locked = true;
+
                         await saveOwnerRoomSettings(
                             interaction.client,
                             interaction.guild.id,
                             tempInfo.ownerId,
-                            {
-                                locked: true
-                            }
+                            settings
                         );
 
                         await interaction.reply({
@@ -804,6 +957,9 @@ async function sendControlPanel(
                         return;
                     }
 
+                    /*
+                     * فتح
+                     */
                     if (
                         interaction.customId ===
                         `jtc_unlock_${channelId}`
@@ -817,13 +973,19 @@ async function sendControlPanel(
                                 }
                             );
 
+                        const settings =
+                            getOwnerRoomSettings(
+                                config,
+                                tempInfo.ownerId
+                            );
+
+                        settings.locked = false;
+
                         await saveOwnerRoomSettings(
                             interaction.client,
                             interaction.guild.id,
                             tempInfo.ownerId,
-                            {
-                                locked: false
-                            }
+                            settings
                         );
 
                         await interaction.reply({
@@ -838,7 +1000,6 @@ async function sendControlPanel(
                     /*
                      * إضافة شخص
                      */
-
                     if (
                         interaction.customId ===
                         `jtc_add_${channelId}`
@@ -857,7 +1018,9 @@ async function sendControlPanel(
                         await interaction.update({
                             content:
                                 '👤 اختر الشخص الذي تريد السماح له بدخول الروم:',
+
                             embeds: [],
+
                             components: [
                                 new ActionRowBuilder()
                                     .addComponents(
@@ -872,7 +1035,6 @@ async function sendControlPanel(
                     /*
                      * إزالة شخص
                      */
-
                     if (
                         interaction.customId ===
                         `jtc_remove_${channelId}`
@@ -883,7 +1045,7 @@ async function sendControlPanel(
                                     `jtc_remove_user_${channelId}`
                                 )
                                 .setPlaceholder(
-                                    'اختر الشخص الذي تريد إزالته'
+                                    'اختر الشخص الذي تريد منعه من دخول الروم'
                                 )
                                 .setMinValues(1)
                                 .setMaxValues(1);
@@ -891,7 +1053,9 @@ async function sendControlPanel(
                         await interaction.update({
                             content:
                                 '👤 اختر الشخص الذي تريد منعه من دخول الروم:',
+
                             embeds: [],
+
                             components: [
                                 new ActionRowBuilder()
                                     .addComponents(
@@ -906,7 +1070,6 @@ async function sendControlPanel(
                     /*
                      * تغيير الاسم
                      */
-
                     if (
                         interaction.customId ===
                         `jtc_rename_${channelId}`
@@ -1003,9 +1166,7 @@ async function sendControlPanel(
                             .setName(
                                 controlName
                             )
-                            .catch(
-                                () => {}
-                            );
+                            .catch(() => {});
 
                         await submitted.reply({
                             content:
@@ -1016,9 +1177,10 @@ async function sendControlPanel(
                         return;
                     }
                 }
-                                /*
-                 * اختيار شخص
-                 */
+
+                /* =================================================
+                 * User Select Menu
+                 * ================================================= */
 
                 if (
                     interaction.isUserSelectMenu()
@@ -1039,9 +1201,11 @@ async function sendControlPanel(
                         await interaction.update({
                             content:
                                 '❌ لم أتمكن من العثور على هذا العضو.',
+
                             embeds: [
                                 createPanelEmbed()
                             ],
+
                             components: [
                                 createButtons()
                             ]
@@ -1053,11 +1217,34 @@ async function sendControlPanel(
                     /*
                      * إضافة شخص
                      */
-
                     if (
                         interaction.customId ===
                         `jtc_add_user_${channelId}`
                     ) {
+                        /*
+                         * لا نسمح بإضافة المالك لنفسه
+                         * كإعداد إضافي.
+                         */
+                        if (
+                            selectedUserId ===
+                            tempInfo.ownerId
+                        ) {
+                            await interaction.update({
+                                content:
+                                    '❌ هذا الشخص هو مالك الروم بالفعل.',
+
+                                embeds: [
+                                    createPanelEmbed()
+                                ],
+
+                                components: [
+                                    createButtons()
+                                ]
+                            });
+
+                            return;
+                        }
+
                         await currentChannel
                             .permissionOverwrites
                             .edit(
@@ -1077,7 +1264,8 @@ async function sendControlPanel(
                         addSettings.allowedUserIds =
                             addSettings.allowedUserIds.filter(
                                 userId =>
-                                    userId !== selectedUserId
+                                    userId !==
+                                    selectedUserId
                             );
 
                         addSettings.allowedUserIds.push(
@@ -1087,7 +1275,8 @@ async function sendControlPanel(
                         addSettings.deniedUserIds =
                             addSettings.deniedUserIds.filter(
                                 userId =>
-                                    userId !== selectedUserId
+                                    userId !==
+                                    selectedUserId
                             );
 
                         await saveOwnerRoomSettings(
@@ -1100,9 +1289,11 @@ async function sendControlPanel(
                         await interaction.update({
                             content:
                                 `👑 <@${tempInfo.ownerId}>`,
+
                             embeds: [
                                 createPanelEmbed()
                             ],
+
                             components: [
                                 createButtons()
                             ]
@@ -1114,11 +1305,30 @@ async function sendControlPanel(
                     /*
                      * إزالة شخص
                      */
-
                     if (
                         interaction.customId ===
                         `jtc_remove_user_${channelId}`
                     ) {
+                        if (
+                            selectedUserId ===
+                            tempInfo.ownerId
+                        ) {
+                            await interaction.update({
+                                content:
+                                    '❌ لا يمكنك إزالة مالك الروم.',
+
+                                embeds: [
+                                    createPanelEmbed()
+                                ],
+
+                                components: [
+                                    createButtons()
+                                ]
+                            });
+
+                            return;
+                        }
+
                         await currentChannel
                             .permissionOverwrites
                             .edit(
@@ -1137,7 +1347,8 @@ async function sendControlPanel(
                         removeSettings.deniedUserIds =
                             removeSettings.deniedUserIds.filter(
                                 userId =>
-                                    userId !== selectedUserId
+                                    userId !==
+                                    selectedUserId
                             );
 
                         removeSettings.deniedUserIds.push(
@@ -1147,7 +1358,8 @@ async function sendControlPanel(
                         removeSettings.allowedUserIds =
                             removeSettings.allowedUserIds.filter(
                                 userId =>
-                                    userId !== selectedUserId
+                                    userId !==
+                                    selectedUserId
                             );
 
                         await saveOwnerRoomSettings(
@@ -1160,9 +1372,11 @@ async function sendControlPanel(
                         await interaction.update({
                             content:
                                 `👑 <@${tempInfo.ownerId}>`,
+
                             embeds: [
                                 createPanelEmbed()
                             ],
+
                             components: [
                                 createButtons()
                             ]
@@ -1171,7 +1385,6 @@ async function sendControlPanel(
                         return;
                     }
                 }
-
             } catch (error) {
                 logger.error(
                     `JoinToCreate control panel error for channel ${voiceChannel.id}:`,
@@ -1186,92 +1399,99 @@ async function sendControlPanel(
                         content:
                             '❌ حدث خطأ أثناء تنفيذ العملية.',
                         ephemeral: true
-                    }).catch(
-                        () => {}
-                    );
+                    }).catch(() => {});
                 }
             }
         }
     );
 }
 
+/* =========================================================
+ * Owner Room Settings
+ * ========================================================= */
+
 function getOwnerRoomSettings(
     config,
     ownerId
 ) {
     const saved =
-        config.ownerRoomSettings?.[ownerId] || {};
+        config?.ownerRoomSettings?.[ownerId] ||
+        {};
 
     return {
-        locked: Boolean(saved.locked),
+        locked:
+            Boolean(saved.locked),
 
-        allowedUserIds: Array.isArray(
-            saved.allowedUserIds
-        )
-            ? [...new Set(saved.allowedUserIds)]
-            : [],
-
-        deniedUserIds: Array.isArray(
-            saved.deniedUserIds
-        )
-            ? [...new Set(saved.deniedUserIds)]
-            : []
-    };
-}
-        async function saveOwnerRoomSettings(
-            client,
-            guildId,
-            ownerId,
-            settings
-        ) {
-            const config =
-                await getJoinToCreateConfig(
-                    client,
-                    guildId
-                );
-
-            if (!config.ownerRoomSettings) {
-                config.ownerRoomSettings = {};
-            }
-
-            config.ownerRoomSettings[ownerId] = {
-                locked: Boolean(settings.locked),
-                allowedUserIds: [
+        allowedUserIds:
+            Array.isArray(
+                saved.allowedUserIds
+            )
+                ? [
                     ...new Set(
-                        settings.allowedUserIds || []
-                    )
-                ],
-                deniedUserIds: [
-                    ...new Set(
-                        settings.deniedUserIds || []
+                        saved.allowedUserIds
                     )
                 ]
-            };
+                : [],
 
-            await client.db.set(
-                `guild:${guildId}:jointocreate`,
-                config
-            );
+        deniedUserIds:
+            Array.isArray(
+                saved.deniedUserIds
+            )
+                ? [
+                    ...new Set(
+                        saved.deniedUserIds
+                    )
+                ]
+                : []
+    };
+}
 
-            return config.ownerRoomSettings[ownerId];
-        }
+async function saveOwnerRoomSettings(
+    client,
+    guildId,
+    ownerId,
+    settings
+) {
+    const config =
+        await getJoinToCreateConfig(
+            client,
+            guildId
+        );
 
-        if (
-            client.config?.features?.music
-        ) {
-            handleMusicVoiceState(
-                client,
-                oldState,
-                newState
-            ).catch(error => {
-                logger.error(
-                    'Music voice state handler error:',
-                    error
-                );
-            });
-        }
+    if (!config.ownerRoomSettings) {
+        config.ownerRoomSettings = {};
     }
-};
+
+    config.ownerRoomSettings[ownerId] = {
+        locked:
+            Boolean(settings.locked),
+
+        allowedUserIds: [
+            ...new Set(
+                settings.allowedUserIds || []
+            )
+        ],
+
+        deniedUserIds: [
+            ...new Set(
+                settings.deniedUserIds || []
+            )
+        ]
+    };
+
+    await client.db.set(
+        `guild:${guildId}:jointocreate`,
+        config
+    );
+
+    return config.ownerRoomSettings[
+        ownerId
+    ];
+}
+
+/* =========================================================
+ * Channel Name Sanitization
+ * ========================================================= */
 
 function sanitizeVoiceChannelName(
     inputName
@@ -1296,6 +1516,10 @@ function sanitizeVoiceChannelName(
         FALLBACK_CHANNEL_NAME
     );
 }
+
+/* =========================================================
+ * Cooldown Cleanup
+ * ========================================================= */
 
 function cleanupCooldownEntries() {
     const now = Date.now();

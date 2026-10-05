@@ -52,11 +52,6 @@ export default {
                         .setName("user_limit")
                         .setDescription("الحد الأقصى لعدد المستخدمين في القنوات المؤقتة. (0 = بدون حد)")
                 )
-                .addIntegerOption((option) =>
-                    option
-                        .setName("bitrate")
-                        .setDescription("معدل البت للقنوات المؤقتة بالكيلوبت في الثانية (8-96).")
-                )
         )
         .addSubcommand((subcommand) =>
             subcommand
@@ -121,7 +116,6 @@ async function handleSetupSubcommand(interaction, client) {
         const category = interaction.options.getChannel('category');
         const nameTemplate = interaction.options.getString('channel_name') || "{username}'s Room";
         const userLimit = interaction.options.getInteger('user_limit') || 0;
-        const bitrate = interaction.options.getInteger('bitrate') || 64;
         const guildId = interaction.guild.id;
 
         logger.debug(`Setting up Join to Create in guild ${guildId} with template: ${nameTemplate}`);
@@ -172,7 +166,6 @@ async function handleSetupSubcommand(interaction, client) {
             type: ChannelType.GuildVoice,
             parent: category?.id,
             userLimit: 0,
-            bitrate: 64000,
             permissionOverwrites: [
                 {
                     id: interaction.guild.id,
@@ -186,15 +179,13 @@ async function handleSetupSubcommand(interaction, client) {
         const config = await initializeJoinToCreate(client, guildId, triggerChannel.id, {
             nameTemplate: nameTemplate,
             userLimit: userLimit,
-            bitrate: bitrate * 1000,
             categoryId: category?.id
         });
 
         await logConfigurationChange(client, guildId, interaction.user.id, 'Initialized Join to Create', {
             channelId: triggerChannel.id,
             nameTemplate,
-            userLimit,
-            bitrate
+            userLimit
         });
 
         logger.info(`Successfully created Join to Create system in guild ${guildId}`);
@@ -205,7 +196,6 @@ async function handleSetupSubcommand(interaction, client) {
             `**الإعدادات:**\n` +
             `• القالب: \`${nameTemplate}\`\n` +
             `• حد المستخدمين: ${userLimit === 0 ? 'بدون حد' : userLimit + ' مستخدم'}\n` +
-            `• معدل البت: ${bitrate} كيلوبت/ثانية\n` +
             `${category ? `• التصنيف: ${category.name}` : '• التصنيف: المستوى الرئيسي'}`
         );
 
@@ -246,11 +236,6 @@ async function handleConfigSubcommand(interaction, client) {
                     name: 'حد المستخدمين',
                     value: `${(channelConfig.userLimit ?? currentConfig.userLimit ?? 0) === 0 ? 'بدون حد' : (channelConfig.userLimit ?? currentConfig.userLimit ?? 0) + ' مستخدم'}`,
                     inline: true
-                },
-                {
-                    name: 'معدل البت',
-                    value: `${(channelConfig.bitrate ?? currentConfig.bitrate ?? 64000) / 1000} كيلوبت/ثانية`,
-                    inline: true
                 }
             )
             .setFooter({ text: 'استخدم الأزرار بالأسفل لتعديل الإعدادات • يدعم السيرفر قناة تشغيل واحدة فقط' })
@@ -266,17 +251,12 @@ async function handleConfigSubcommand(interaction, client) {
             .setLabel('👥 حد المستخدمين')
             .setStyle(ButtonStyle.Primary);
 
-        const bitrateButton = new ButtonBuilder()
-            .setCustomId(`jtc_config_bitrate_${triggerChannel.id}`)
-            .setLabel('🎵 معدل البت')
-            .setStyle(ButtonStyle.Primary);
-
         const deleteButton = new ButtonBuilder()
             .setCustomId(`jtc_config_delete_${triggerChannel.id}`)
             .setLabel('🗑️ إزالة القناة')
             .setStyle(ButtonStyle.Danger);
 
-        const row = new ActionRowBuilder().addComponents(nameButton, limitButton, bitrateButton, deleteButton);
+        const row = new ActionRowBuilder().addComponents(nameButton, limitButton, deleteButton);
 
         await InteractionHelper.safeEditReply(interaction, {
             embeds: [configEmbed],
@@ -315,8 +295,6 @@ async function handleConfigSubcommand(interaction, client) {
                     await handleNameTemplateModal(buttonInteraction, triggerChannel, currentConfig, client);
                 } else if (customId.includes('jtc_config_limit_')) {
                     await handleUserLimitModal(buttonInteraction, triggerChannel, currentConfig, client);
-                } else if (customId.includes('jtc_config_bitrate_')) {
-                    await handleBitrateModal(buttonInteraction, triggerChannel, currentConfig, client);
                 } else if (customId.includes('jtc_config_delete_')) {
                     await handleChannelDeletion(buttonInteraction, triggerChannel, currentConfig, client);
                 }
@@ -342,7 +320,6 @@ async function handleConfigSubcommand(interaction, client) {
             const disabledRow = new ActionRowBuilder().addComponents(
                 nameButton.setDisabled(true),
                 limitButton.setDisabled(true),
-                bitrateButton.setDisabled(true),
                 deleteButton.setDisabled(true)
             );
 
@@ -373,9 +350,9 @@ async function handleNameTemplateModal(interaction, triggerChannel, currentConfi
             { label: "{username}'s Space",          value: "{username}'s Space" },
             { label: "{displayName}'s Room",        value: "{displayName}'s Room" },
             { label: "{username}'s VC",             value: "{username}'s VC" },
-            { label: "{username}'s Music Room",  value: "{username}'s Music Room" },
-            { label: "{username}'s Gaming Room", value: "{username}'s Gaming Room" },
-            { label: "{username}'s Chat Room",   value: "{username}'s Chat Room" },
+            { label: "{username}'s Music Room",     value: "{username}'s Music Room" },
+            { label: "{username}'s Gaming Room",    value: "{username}'s Gaming Room" },
+            { label: "{username}'s Chat Room",      value: "{username}'s Chat Room" },
             { label: "{username}'s Private Room",   value: "{username}'s Private Room" },
         ];
 
@@ -514,74 +491,6 @@ async function handleUserLimitModal(interaction, triggerChannel, currentConfig, 
             `Modal error: ${error.message}`,
             ErrorTypes.UNKNOWN,
             'حدث خطأ أثناء تحديث حد المستخدمين.'
-        );
-    }
-}
-
-async function handleBitrateModal(interaction, triggerChannel, currentConfig, client) {
-    try {
-        const currentBitrate = ((currentConfig.channelConfig.bitrate ?? currentConfig.bitrate ?? 64000) / 1000);
-
-        const modal = new ModalBuilder()
-            .setCustomId(`jtc_bitrate_modal_${triggerChannel.id}`)
-            .setTitle('إعداد معدل البت')
-            .addComponents(
-                new ActionRowBuilder().addComponents(
-                    new TextInputBuilder()
-                        .setCustomId('bitrate')
-                        .setLabel('أدخل معدل البت بالكيلوبت/ثانية (8-384)')
-                        .setPlaceholder('أدخل رقمًا بين 8 و384')
-                        .setStyle(TextInputStyle.Short)
-                        .setRequired(true)
-                        .setMinLength(1)
-                        .setMaxLength(3)
-                        .setValue(currentBitrate.toString())
-                )
-            );
-
-        await interaction.showModal(modal);
-
-        const modalSubmission = await interaction.awaitModalSubmit({
-            filter: (i) => i.customId === `jtc_bitrate_modal_${triggerChannel.id}` && i.user.id === interaction.user.id,
-            time: 60000
-        });
-
-        if (!hasManageGuildPermission(modalSubmission.member)) {
-            await modalSubmission.reply({
-                content: '❌ تحتاج إلى صلاحية **إدارة السيرفر** لتعديل هذه الإعدادات.',
-                flags: MessageFlags.Ephemeral
-            });
-            return;
-        }
-
-        const userInput = modalSubmission.fields.getTextInputValue('bitrate').trim();
-
-        await updateChannelConfig(client, interaction.guild.id, triggerChannel.id, {
-            bitrate: parseInt(userInput) * 1000
-        });
-
-        await logConfigurationChange(client, interaction.guild.id, interaction.user.id, 'Updated bitrate', {
-            channelId: triggerChannel.id,
-            bitrate: parseInt(userInput)
-        });
-
-        await modalSubmission.reply({
-            embeds: [successEmbed('تم التحديث', `تم تغيير معدل البت إلى ${parseInt(userInput)} كيلوبت/ثانية`)],
-            flags: MessageFlags.Ephemeral
-        });
-
-    } catch (error) {
-        if (error.code === 'INTERACTION_COLLECTOR_ERROR') {
-            return;
-        }
-        if (error instanceof TitanBotError) {
-            throw error;
-        }
-        logger.error('Unexpected error in bitrate modal:', error);
-        throw new TitanBotError(
-            `Modal error: ${error.message}`,
-            ErrorTypes.UNKNOWN,
-            'حدث خطأ أثناء تحديث معدل البت.'
         );
     }
 }

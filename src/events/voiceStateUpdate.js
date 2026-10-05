@@ -591,62 +591,161 @@ export default {
                         }
 
                         if (
-                            interaction.customId ===
-                            `jtc_add_${channelId}`
-                        ) {
-                            const select =
-                                new UserSelectMenuBuilder()
-                                    .setCustomId(
-                                        `jtc_add_user_${channelId}`
-                                    )
-                                    .setPlaceholder(
-                                        'اختر الشخص الذي تريد إضافته'
-                                    )
-                                    .setMinValues(1)
-                                    .setMaxValues(1);
+    interaction.customId ===
+    `jtc_remove_${channelId}`
+) {
+    const select =
+        new UserSelectMenuBuilder()
+            .setCustomId(
+                `jtc_remove_user_${channelId}`
+            )
+            .setPlaceholder(
+                'اختر الشخص الذي تريد إزالته'
+            )
+            .setMinValues(1)
+            .setMaxValues(1);
 
-                            await interaction.reply({
-                                content:
-                                    '👤 اختر الشخص الذي تريد السماح له بدخول الروم:',
-                                components: [
-                                    new ActionRowBuilder().addComponents(
-                                        select
-                                    )
-                                ],
-                                ephemeral: true
-                            });
+    await interaction.reply({
+        content:
+            '👤 اختر الشخص الذي تريد منعه من دخول الروم:',
+        components: [
+            new ActionRowBuilder().addComponents(
+                select
+            )
+        ],
+        ephemeral: true
+    });
 
-                            return;
-                        }
+    const selectInteraction =
+        await interaction.awaitMessageComponent({
+            time: 60000,
+            filter: i =>
+                i.user.id === interaction.user.id &&
+                i.customId ===
+                    `jtc_remove_user_${channelId}`
+        }).catch(() => null);
+
+    if (!selectInteraction) {
+        await interaction.editReply({
+            content: '⏰ انتهى وقت الاختيار.',
+            components: []
+        }).catch(() => {});
+
+        return;
+    }
+
+    const selectedUserId =
+        selectInteraction.values[0];
+
+    const selectedMember =
+        await interaction.guild.members
+            .fetch(selectedUserId)
+            .catch(() => null);
+
+    if (!selectedMember) {
+        await selectInteraction.update({
+            content:
+                '❌ لم أتمكن من العثور على هذا العضو.',
+            components: []
+        });
+
+        return;
+    }
+
+    await currentChannel.permissionOverwrites.edit(
+        selectedUserId,
+        {
+            Connect: false
+        }
+    );
+
+    await selectInteraction.update({
+        content:
+            `✅ تم منع <@${selectedUserId}> من دخول الروم.`,
+        components: []
+    });
+
+    return;
+}
 
                         if (
-                            interaction.customId ===
-                            `jtc_remove_${channelId}`
-                        ) {
-                            const select =
-                                new UserSelectMenuBuilder()
-                                    .setCustomId(
-                                        `jtc_remove_user_${channelId}`
-                                    )
-                                    .setPlaceholder(
-                                        'اختر الشخص الذي تريد إزالته'
-                                    )
-                                    .setMinValues(1)
-                                    .setMaxValues(1);
+    interaction.customId ===
+    `jtc_add_${channelId}`
+) {
+    const select =
+        new UserSelectMenuBuilder()
+            .setCustomId(
+                `jtc_add_user_${channelId}`
+            )
+            .setPlaceholder(
+                'اختر الشخص الذي تريد إضافته'
+            )
+            .setMinValues(1)
+            .setMaxValues(1);
 
-                            await interaction.reply({
-                                content:
-                                    '👤 اختر الشخص الذي تريد منعه من دخول الروم:',
-                                components: [
-                                    new ActionRowBuilder().addComponents(
-                                        select
-                                    )
-                                ],
-                                ephemeral: true
-                            });
+    await interaction.reply({
+        content:
+            '👤 اختر الشخص الذي تريد السماح له بدخول الروم:',
+        components: [
+            new ActionRowBuilder().addComponents(
+                select
+            )
+        ],
+        ephemeral: true
+    });
 
-                            return;
-                        }
+    const selectInteraction =
+        await interaction.awaitMessageComponent({
+            time: 60000,
+            filter: i =>
+                i.user.id === interaction.user.id &&
+                i.customId ===
+                    `jtc_add_user_${channelId}`
+        }).catch(() => null);
+
+    if (!selectInteraction) {
+        await interaction.editReply({
+            content: '⏰ انتهى وقت الاختيار.',
+            components: []
+        }).catch(() => {});
+
+        return;
+    }
+
+    const selectedUserId =
+        selectInteraction.values[0];
+
+    const selectedMember =
+        await interaction.guild.members
+            .fetch(selectedUserId)
+            .catch(() => null);
+
+    if (!selectedMember) {
+        await selectInteraction.update({
+            content:
+                '❌ لم أتمكن من العثور على هذا العضو.',
+            components: []
+        });
+
+        return;
+    }
+
+    await currentChannel.permissionOverwrites.edit(
+        selectedUserId,
+        {
+            Connect: true,
+            Speak: true
+        }
+    );
+
+    await selectInteraction.update({
+        content:
+            `✅ تم السماح لـ <@${selectedUserId}> بدخول الروم.`,
+        components: []
+    });
+
+    return;
+}
 
                         if (
                             interaction.customId ===

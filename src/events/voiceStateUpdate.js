@@ -22,6 +22,7 @@ import {
 import { sanitizeInput } from '../utils/validation.js';
 import { logger } from '../utils/logger.js';
 import { handleMusicVoiceState } from '../services/music/musicVoiceState.js';
+import { handleVoiceXpState } from '../services/leveling/voiceXpSystem.js';
 
 const channelCreationCooldown = new Map();
 

@@ -35,7 +35,9 @@ export default {
     name: 'voiceStateUpdate',
 
     async execute(oldState, newState, client) {
-        if (newState.member?.user?.bot) return;
+    if (newState.member?.user?.bot) return;
+
+    handleVoiceXpState(client, oldState, newState);
 
         const guildId = newState.guild.id;
         const userId = newState.member.id;
